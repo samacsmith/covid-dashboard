@@ -1,0 +1,187 @@
+/* Taken and modified from https://codepen.io/chriddyp/pen/bWLwgP.css */
+
+/* Table of contents
+––––––––––––––––––––––––––––––––––––––––––––––––––
+- Base Styles
+- Grid
+- Typography
+- Clearing
+- Tabs
+- Sliders, dropdowns, etc
+- Misc
+
+
+*/
+
+
+/* Base Styles
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+:root {
+  --maincolor: #4589ff;
+}
+
+@font-face {
+	font-family: 'Roboto';
+	src: url('fonts/Roboto/Roboto-Regular.ttf');
+}
+
+@font-face {
+	font-family: 'Roboto Mono';
+	src: url('fonts/Roboto_Mono/static/RobotoMono-Regular.ttf');
+}
+
+body {
+  font-size: 1em;
+  line-height: 1.6;
+  font-weight: 400;
+  font-family: "Roboto";
+  color: #333333;
+  background-color: #f9f9f9}
+
+
+
+/* Typography
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: 500;}
+
+h1 {font-size: 2.4rem;}
+h2 {font-size: 2rem;}
+h3 {font-size: 1.6rem; color: var(--maincolor);}
+h4 {font-size: 1.2rem;}
+h5 {font-size: 0.8rem; margin-left: 0.5;padding-left: 1.5;}
+h6 {font-size: 0.4rem;}
+
+p {margin-top: 0; }
+
+
+/* Grid
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+.container {position: relative;
+  width: 95%;
+  margin: 75px auto;}
+
+.row{float: left;
+  width: 100%;
+  margin: auto;
+  padding: 0px;
+  overflow: hidden;}
+
+.flex-container {display: flex;}
+
+.column, .columns {
+  width: 100%;
+  margin-left: 2%;
+  display:inline-block;}
+
+.column:first-child, .columns:first-child {
+  margin-left: 0;}
+
+.one.column, .one.columns       { width: 4.66666666667%; }
+.two.columns                    { width: 13.3333333333%; }
+.three.columns                  { width: 22%;            }
+.four.columns                   { width: 30.6666666667%; }
+.five.columns                   { width: 39.3333333333%; }
+.six.columns                    { width: 48%;            }
+.seven.columns                  { width: 56.6666666667%; }
+.eight.columns                  { width: 65.3333333333%; }
+.nine.columns                   { width: 74.0%;          }
+.ten.columns                    { width: 82.6666666667%; }
+.eleven.columns                 { width: 91.3333333333%; }
+.twelve.columns                 { width: 100%; margin-left: 0;}
+
+.one-third.column               { width: 30.6666666667%;}
+.two-thirds.column              { width: 65.3333333333%;}
+
+.one-half.column                { width: 47%;}
+
+.pretty-container {border-radius: 10px;
+  margin-bottom: 20px;
+  padding: 20px;
+  background-color:#ffffff;
+}
+
+
+/* Clearing
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+/* Self Clearing Goodness */
+.container:after,
+.row:after{
+  content: "";
+  display: table;
+  clear: both;}
+
+
+/* Tabs
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+.tabs.row{margin-top: 40px;
+  margin-bottom: 40px;}
+
+.custom-tab {font-size: 1em;
+  border-top: #f9f9f9 solid 0.1px !important;
+  border-bottom: #f9f9f9 solid 0.1px !important;
+  height: 10px;
+  line-height: 5px;
+  text-align: center;}
+
+.custom-tab--selected {border-bottom: var(--maincolor) solid 3px !important;
+  border-top: #f9f9f9 solid 0.1px !important;
+  background-color: #f9f9f9 !important;}
+
+
+/* Sliders, dropdowns, etc
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+.input-label {margin: 5px auto 10px;
+  font-size: 1.2em}
+
+.input-style {margin: 5px auto 50px;}
+
+.input-style#metric_selector, .input-style#daily_selector {font-size: 1.2em;
+  margin-right: 20px;}
+
+.input-style#date-slider {overflow: hidden;
+  white-space: nowrap;
+  margin: inherit auto;}
+
+.input-style#region_selector {margin-bottom: 10px;}
+
+.rc-slider-track {
+  background-color: var(--maincolor);
+}
+
+.rc-slider-dot-active {
+  border-color: var(--maincolor);
+  border: solid 2px var(--maincolor);
+}
+
+.rc-slider-handle {
+  background-color: var(--maincolor);
+  border-color: var(--maincolor);
+}
+
+
+/* Misc
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+.js-plotly-plot .plotly .modebar {
+  padding-top: 3%;
+  margin-right: 6.5%;
+}
+
+.plotly-graph{
+  margin: 0 0 0 5%;
+}
+
+#header #logo {
+  text-align: right;
+  margin-top: 10px;}
+
+
+
