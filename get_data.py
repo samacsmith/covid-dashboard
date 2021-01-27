@@ -206,7 +206,7 @@ def make_bar(df, x_title, y_title, x, y, rolling_avg):
     fig=px.bar(df, x=x, y=y,
              labels={x: x_title, y: y_title})
     
-    fig.update_traces(marker_color=colors['maincolor'], hovertemplate='Daily: %{y:,.0f}')
+    fig.update_traces(marker_color=colors['maincolor'], hovertemplate='Daily: %{y:,.0f}', howlegend=True)
 
     fig2 = px.line(df, x=x, y='daily_rolling_average', line_shape='spline')
     fig2.update_traces(name=f'{rolling_avg} day rolling average', showlegend=True, line_color='#000000', hovertemplate='%{y:,.0f}')
@@ -216,7 +216,14 @@ def make_bar(df, x_title, y_title, x, y, rolling_avg):
     fig.update_layout(yaxis=dict(tickformat=',0.f', showgrid=False),
                       xaxis=dict(showgrid=False),
                      hovermode='x unified',
-                     showlegend= True)
+                     showlegend= True,
+                     legend={
+                            "orientation": "h",
+                            "xanchor": "center",
+                            'y': 1.2,
+                            'x': 0.5,
+                            'font': dict(size=9)
+                            },)
 
     fig.update_xaxes(range=[datetime.strptime("11 January, 2021", "%d %B, %Y") + timedelta(hours=-12), 
                             df[x].max() + timedelta(days=-90, hours=12)], 
