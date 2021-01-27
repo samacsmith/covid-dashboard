@@ -61,6 +61,7 @@ def serve_layout():
 ])
 
 app = dash.Dash(__name__)
+server = app.server
 app.config["suppress_callback_exceptions"] = True
 
 app.title = 'COVID-19 Dashboard'
