@@ -216,7 +216,7 @@ def make_bar(df, x_title, y_title, x, y, rolling_avg):
     fig.update_layout(yaxis=dict(tickformat=',0.f', showgrid=False),
                       xaxis=dict(showgrid=False),
                      hovermode='x unified',
-                     showlegend= False)
+                     showlegend= True)
 
     fig.update_xaxes(range=[datetime.strptime("11 January, 2021", "%d %B, %Y") + timedelta(hours=-12), 
                             df[x].max() + timedelta(days=-90, hours=12)], 
