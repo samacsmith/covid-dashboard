@@ -1,16 +1,15 @@
-import datetime as dt
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-from datetime import timedelta
+from datetime import datetime, timedelta
 from dash.dependencies import Input, Output
-from get_data import get_covid_data, make_plot, make_bar, make_gauge
+from get_data import get_covid_data, make_cum_vaccine_plot, make_bar, make_gauge
 
 def update_data():
     df, last_update, rolling_avg, end_date = get_covid_data()
 
-    cum_first_dose = make_plot(df, 'Date (reported)', 'Cumulative Number of First Doses', 'date', 'cum_first_dose', end_date)
-    daily_first_dose = make_bar(df.loc[(df['date'] > dt.datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 'Daily Number of First Doses', 'date', 'daily_first_dose', rolling_avg)
+    cum_first_dose = make_cum_vaccine_plot(df, end_date)
+    daily_first_dose = make_bar(df.loc[(df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 'Daily Number of First Doses', 'date', 'daily_first_dose', rolling_avg)
     gauge_chart = make_gauge(df.set_index('date').loc[end_date, 'cum_first_dose'],
                         df.set_index('date').loc[end_date+timedelta(days=-1), 'cum_first_dose'])
 
@@ -37,7 +36,7 @@ def serve_layout():
 
         html.Div(id='updates', className='three columns', children=[
             html.H5(children=f'Data up to: {last_update}', style={'text-align': 'right', 'font-family': "Roboto Mono", 'font-size': '0.8rem'}),
-            html.H5(children=f'Page last updated: {dt.datetime.now().strftime("%a %d %b %H:%M")}', style={'text-align': 'right', 'font-family': "Roboto Mono", 'font-size': '0.8rem'})            
+            html.H5(children=f'Page last updated: {datetime.now().strftime("%a %d %b %H:%M")}', style={'text-align': 'right', 'font-family': "Roboto Mono", 'font-size': '0.8rem'})            
         ])    
     ]),
 
@@ -103,3 +102,13 @@ def render_content(tab):
 
 if __name__ == '__main__':
     app.run_server(debug=True)
+
+
+'''
+To Do:
+1) User defined vaccination efficacy (for number immune and cases)
+2) Take into account second doses
+3) Headline figures/dates
+4) log plot with quadratic
+5) Update number in each priority group and stop first doses after all done
+'''
