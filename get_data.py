@@ -97,7 +97,7 @@ def get_covid_data():
     start_date = df['date'].min() + +timedelta(days=1)
     end_date = df['date'].max()
     dates = pd.date_range(start=end_date+timedelta(days=1),
-                        end=end_date+timedelta(days=90))
+                        end=end_date+timedelta(days=150))
     dates = dates.to_frame()
     dates.columns = ['date']
     dates['projection_first'] = 0
@@ -214,10 +214,10 @@ def make_cum_vaccine_plot(df, end_date):
                                 line=dict(dash="dot", color=colors['lloyds']))
                             ])
 
-    fig.add_annotation(x=datetime.strptime("15 February, 2021", "%d %B, %Y"), yref='y', y=13.4e6, ax=25, ay=25,
-            text="Top 4 Priority<br>Groups Target", xanchor="left", xshift=5, showarrow=True, arrowhead=1, arrowsize = 2)
-    fig.add_annotation(x=datetime.strptime("31 March, 2021", "%d %B, %Y"), yref='y', y=29.6e6, ax=40, ay=25,
-            text="Priority Groups<br>1-9 Target<br>(all over 50s)", xanchor="left", xshift=5, showarrow=True, arrowhead=1, arrowsize = 2)
+    fig.add_annotation(x=0, xref='paper', yref='y', y=13.4e6, ax=25, ay=25, align="left",
+            text="Top 4 Priority Groups", xanchor="left", yanchor='bottom', xshift=5, showarrow=False, arrowhead=1, arrowsize = 2)
+    fig.add_annotation(x=0, xref='paper', yref='y', y=29.6e6, ax=40, ay=0, yanchor='bottom', align="left",
+            text="Priority Groups<br>1-9 (all over 50s)", xanchor="left", xshift=5, showarrow=False, arrowhead=1, arrowsize = 2)
 
     fig.update_xaxes(range=[datetime.strptime("8 December, 2020", "%d %B, %Y"), 
                             df['date'].max() + timedelta(days=20)], 
@@ -230,7 +230,7 @@ def make_bar(df, x_title, y_title, x, y, rolling_avg):
     
     fig.update_traces(name=f'Daily Doses', marker_color=colors['maincolor'], hovertemplate='Daily: %{y:,.0f}', showlegend=True)
 
-    fig2 = px.line(df, x=x, y='daily_rolling_average_first', line_shape='spline')
+    fig2 = px.line(df, x=x, y='daily_rolling_average_total', line_shape='spline')
     fig2.update_traces(name=f'{rolling_avg} day rolling average', showlegend=True, line_color='#000000', hovertemplate='%{y:,.0f}')
 
     fig.add_trace(fig2.data[0])
@@ -245,7 +245,7 @@ def make_bar(df, x_title, y_title, x, y, rolling_avg):
                              })
 
     fig.update_xaxes(range=[datetime.strptime("11 January, 2021", "%d %B, %Y") + timedelta(hours=-12), 
-                            df[x].max() + timedelta(days=-90, hours=12)], 
+                            df[x].max() + timedelta(days=-150, hours=12)], 
                             scaleratio = 0.1)
     return fig
 

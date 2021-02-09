@@ -9,21 +9,21 @@ def update_data():
     df, last_update, rolling_avg, end_date = get_covid_data()
 
     cum_first_dose = make_cum_vaccine_plot(df, end_date)
-    daily_first_dose = make_bar(df.loc[(df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 'Daily Number of First Doses', 'date', 'daily_first_dose', rolling_avg)
+    daily_dose = make_bar(df.loc[(df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 'Daily Number of Doses (First and Second)', 'date', 'daily_total_doses', rolling_avg)
     gauge_chart = make_gauge(df.set_index('date').loc[end_date, 'cum_first_dose'],
                         df.set_index('date').loc[end_date+timedelta(days=-1), 'cum_first_dose'])
 
-    return last_update, cum_first_dose, daily_first_dose, gauge_chart
+    return last_update, cum_first_dose, daily_dose, gauge_chart
     
 
 def serve_layout():
 
     global last_update
     global cum_first_dose
-    global daily_first_dose
+    global daily_dose
     global gauge_chart
 
-    last_update, cum_first_dose, daily_first_dose, gauge_chart = update_data()
+    last_update, cum_first_dose, daily_dose, gauge_chart = update_data()
     
     return html.Div(id='whole-page', className='container', children=[
 
@@ -79,7 +79,7 @@ def render_content(tab):
                             dcc.Graph(id='cum-vac-graph', className='plotly-graph', figure=cum_first_dose)
                     ]),
                 html.Div(className='one-half column pretty-container', children=[
-                            dcc.Graph(id='daily-vac-graph', className='plotly-graph', figure=daily_first_dose)
+                            dcc.Graph(id='daily-vac-graph', className='plotly-graph', figure=daily_dose)
                     ])
                 ]),
             html.Div(className='row flex-container', children=[
@@ -111,4 +111,5 @@ To Do:
 3) Headline figures/dates
 4) log plot with quadratic
 5) Update number in each priority group and stop first doses after all done
+6) bar chart for total doses
 '''
