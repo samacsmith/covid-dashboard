@@ -3,17 +3,18 @@ import dash_core_components as dcc
 import dash_html_components as html
 from datetime import datetime, timedelta
 from dash.dependencies import Input, Output
-from get_data import get_covid_data, make_cum_vaccine_plot, make_bar, make_gauge
+from get_data import get_covid_data, make_cum_vaccine_plot, make_bar, make_gauge, make_7da_plot
 
 def update_data():
-    df, last_update, rolling_avg, end_date = get_covid_data()
+    df, last_update, rolling_avg, end_date, recent_df = get_covid_data()
 
     cum_first_dose = make_cum_vaccine_plot(df, end_date)
     daily_dose = make_bar(df.loc[(df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 'Daily Number of Doses (First and Second)', 'date', 'daily_total_doses', rolling_avg)
     gauge_chart = make_gauge(df.set_index('date').loc[end_date, 'cum_first_dose'],
                         df.set_index('date').loc[end_date+timedelta(days=-1), 'cum_first_dose'])
+    fitted_cases = make_7da_plot(recent_df, log=True)
 
-    return last_update, cum_first_dose, daily_dose, gauge_chart
+    return last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases
     
 
 def serve_layout():
@@ -22,8 +23,9 @@ def serve_layout():
     global cum_first_dose
     global daily_dose
     global gauge_chart
+    global fitted_cases
 
-    last_update, cum_first_dose, daily_dose, gauge_chart = update_data()
+    last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases = update_data()
     
     return html.Div(id='whole-page', className='container', children=[
 
@@ -90,8 +92,12 @@ def render_content(tab):
         ])
                         
     elif tab == 'tab-2':
-        return html.Div(id='whole-tab', children=[
-            html.H4('Some more detailed stuff about cases....')
+        return html.Div(className='whole-tab', children=[
+            html.Div(className='row flex-container', children=[
+                html.Div(className='column pretty-container', children=[
+                            dcc.Graph(id='fitted-cases-graph', className='plotly-graph', figure=fitted_cases)
+                    ])                
+                ])
         ])
 
     elif tab == 'tab-3':
@@ -107,9 +113,8 @@ if __name__ == '__main__':
 '''
 To Do:
 1) User defined vaccination efficacy (for number immune and cases)
-2) Take into account second doses
-3) Headline figures/dates
-4) log plot with quadratic
+2) Headline figures/dates
+3) log plot with quadratic -- cases, hospitalisations and deaths
+4) % comparison for things (e.g. % >80 hospital admissions)
 5) Update number in each priority group and stop first doses after all done
-6) bar chart for total doses
 '''

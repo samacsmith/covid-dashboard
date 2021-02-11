@@ -32,7 +32,11 @@ def get_covid_data():
         "weeklyPeopleVaccinatedFirstDoseByVaccinationDate":"weeklyPeopleVaccinatedFirstDoseByVaccinationDate",
         "cumPeopleVaccinatedFirstDoseByVaccinationDate":"cumPeopleVaccinatedFirstDoseByVaccinationDate",
         "weeklyPeopleVaccinatedSecondDoseByVaccinationDate":"weeklyPeopleVaccinatedSecondDoseByVaccinationDate",
-        "cumPeopleVaccinatedSecondDoseByVaccinationDate":"cumPeopleVaccinatedSecondDoseByVaccinationDate"
+        "cumPeopleVaccinatedSecondDoseByVaccinationDate":"cumPeopleVaccinatedSecondDoseByVaccinationDate",
+        "newCasesByPublishDate": "newCasesByPublishDate",
+        "cumCasesByPublishDate": "cumCasesByPublishDate",
+        "newDeathsByDeathDate": "newDeathsByDeathDate",
+        "cumDeathsByDeathDate": "cumDeathsByDeathDate"
     }
 
     api = Cov19API(
@@ -50,7 +54,26 @@ def get_covid_data():
         structure=get_data
     )
 
-    df = api.get_dataframe()
+    full_df = api.get_dataframe()
+    cases_df = full_df.copy()
+    df = full_df.copy()
+    
+    cases_df = cases_df[['date', 'areaName', 'newCasesByPublishDate', 'newDeathsByDeathDate']]
+    cases_df.columns = ['date', 'area', 'daily_cases', 'daily_deaths']
+    cases_df['date'] = pd.to_datetime(cases_df['date'], format="%Y-%m-%d")
+    cases_df = cases_df.groupby('date').sum().reset_index()
+
+    cases_df['daily_rolling_average'] = cases_df['daily_cases'].rolling(window=7).mean()
+    cases_df = cases_df.dropna()
+    cases_df['days_since_start'] = cases_df['date'].apply(lambda x: (x - datetime(2021,1,9)).days)
+
+    recent_df = cases_df.copy()
+    recent_df = recent_df[recent_df['date']>datetime.strptime("9 January, 2021", "%d %B, %Y")]
+
+    pars, cov = curve_fit(f=exponential, xdata=recent_df['days_since_start'], 
+                              ydata=recent_df['daily_rolling_average'], maxfev=1000)
+    recent_df.loc[:, 'fit'] = recent_df['days_since_start'].apply(lambda x: exponential(x, *pars))
+    
     df = df[['date', 'areaName', 'newPeopleVaccinatedFirstDoseByPublishDate', 
              'cumPeopleVaccinatedFirstDoseByPublishDate', 'cumPeopleVaccinatedFirstDoseByVaccinationDate',
             'newPeopleVaccinatedSecondDoseByPublishDate', 'cumPeopleVaccinatedSecondDoseByPublishDate', 
@@ -58,26 +81,23 @@ def get_covid_data():
     df.columns = ['date', 'area', 'daily_first_dose', 'cum_first_dose', 'cum_first_dose_weekly',
                  'daily_second_dose', 'cum_second_dose', 'cum_second_dose_weekly']
     df['date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
+    df = df[df['date']>=datetime.strptime("8 December, 2020", "%d %B, %Y")]
 
     df = df.groupby('date').sum().reset_index()
+    df = df[:-1]
     for row, col in df.iterrows():
-        if col[2] == 0:
-            df.loc[row, 'cum_first_dose'] = df.loc[row, 'cum_first_dose_weekly']
-            df.loc[row, 'cum_second_dose'] = df.loc[row, 'cum_second_dose_weekly']
-
-    df = df.append(pd.DataFrame([datetime.strptime("8 December, 2020", "%d %B, %Y")], 
-                                columns=['date'])).fillna(0).sort_values('date')
-
-    dates = pd.date_range(start=datetime.strptime("8 December, 2020", "%d %B, %Y"),
-                        end=datetime.strptime("9 January, 2021", "%d %B, %Y"))
-    dates = dates.to_frame()
-    dates.columns = ['date']
-    dates.reset_index(drop=True, inplace=True)
-    df = dates.merge(df, on='date', how='outer').sort_values('date')
-
+        if row != 0:
+            if col[2] == 0:
+                if col[3] != 0:
+                    df.loc[row, 'cum_first_dose'] = df.loc[row, 'cum_first_dose_weekly']
+                    df.loc[row, 'cum_second_dose'] = df.loc[row, 'cum_second_dose_weekly']
+                else:
+                    df.loc[row, 'cum_first_dose'] = np.nan
+                    df.loc[row, 'cum_second_dose'] = np.nan
+                
     df['cum_first_dose'] = df['cum_first_dose'].interpolate(method='linear')
     df['cum_second_dose'] = df['cum_second_dose'].interpolate(method='linear')
-
+    
     for row, col in df.iterrows():
         if row != 0:
             if col[1] == 0 or np.isnan(col[1]):
@@ -146,8 +166,10 @@ def get_covid_data():
         else:
             df.loc[row+21, 'cum_immune'] = np.nan
             df.loc[row+21, 'cum_immune_projected'] = df.loc[row, 'projection_second']
+            
+    
 
-    return df, last_update, rolling_avg, end_date
+    return df, last_update, rolling_avg, end_date, recent_df
 
 
 def make_cum_vaccine_plot(df, end_date):
@@ -290,46 +312,32 @@ def make_cumulative_plot(df, x, y, x_title, y_title):
     return fig
 
 
-def make_daily_plot(df, x, y, x_title, y_title, log=False):
-    fig = px.scatter(df, x=x, y=y, labels={x: x_title, y: y_title}, log_y=log)
-    fig.update_traces(name=y_title, showlegend=True, marker_color=colors['maincolor'])
-
-    fig2 = px.line(df, x=x, y='daily_rolling_average', line_shape='spline')
-    fig2.update_traces(name='7 day rolling average', showlegend=True, line_color='#000000')
+def make_7da_plot(df, log=False):
+    fig = px.scatter(df, x='date', y='daily_rolling_average', 
+                     labels={'date': 'Date (reported)', 
+                             'daily_rolling_average': 'Daily Cases (log scale)'}, 
+                     log_y=log)
+    fig.update_traces(name='Cases (weekly average)', showlegend=True, marker_color=colors['maincolor'])
     
+    fig2 = px.line(df, x='date', y='fit')
+    fig2.update_traces(name='Fit', showlegend=True, line_color='#000000')
     
-    mask = (df['date'] > datetime.strptime("7 January, 2021", "%d %B, %Y")) & (df['date'] <= datetime.strptime("31 January, 2021", "%d %B, %Y"))
-    masked_df = df.loc[mask]
-
-    x_vals = masked_df['date'].apply(lambda x: datetime.timestamp(x))
-    y_vals = masked_df['daily_cases']
-    
-    popt, pcov = curve_fit(exponenial_func, x_vals, y_vals, p0=(-1, 0.01, 1))
-    print(popt)
-    
-    to_plot = df.loc[df['date'] > datetime.strptime("7 January, 2021", "%d %B, %Y")]['date'].apply(lambda x: datetime.timestamp(x))
-    x_to_plot = to_plot.apply(lambda x: datetime.fromtimestamp(x))
-#     y_to_plot = [(slope*x)+intercept for x in to_plot]
-
-    xx = x_to_plot
-    yy = exponenial_func(to_plot, *popt)
-    
-    
-    fig3 = px.line(x=xx, y=yy, labels={x: x_title, y: y_title})
-    fig3.update_traces(name=y_title, showlegend=True, line_color=colors['monzo'])
-
     fig.add_trace(fig2.data[0])
-    fig.add_trace(fig3.data[0])
 
-    fig.update_layout(yaxis=dict(tickformat=',.0f'),font=dict(size=12, color="#000000"), showlegend=True,legend={"orientation": "h",
-                            "xanchor": "center",
-                            'y': 1.2,
-                            'x': 0.5,
-                            'font': dict(size=9)},hovermode="x unified")
+    fig.update_layout(yaxis=dict(tickformat=',.0f'),font=dict(size=12, color="#000000"), 
+                      showlegend=True,
+                      legend={"orientation": "h",
+                              "xanchor": "center",
+                              'x': 0.5,
+                              'y': -0.2,
+                              'font': dict(size=11)
+                             },
+                      hovermode="x unified")
 
     fig.update_traces(hovertemplate='%{y}')
 
     return fig
 
-def exponenial_func(x, a, b, c):
-    return a*np.exp(-b*x)+c
+
+def exponential(x, a, b):
+    return a*np.exp(b*x)
