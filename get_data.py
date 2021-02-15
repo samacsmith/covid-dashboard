@@ -17,62 +17,7 @@ pd.set_option('display.max_columns', None)
 colors = {'maincolor': '#3269a8', 'monzo': '#f88379', 'lloyds': '#024731'}
 
 
-def get_covid_data():
-    all_nations = [
-    "areaType=nation"
-    ]
-
-    get_data = {
-        "date": "date",
-        "areaName": "areaName",
-        "newPeopleVaccinatedFirstDoseByPublishDate":"newPeopleVaccinatedFirstDoseByPublishDate",
-        "newPeopleVaccinatedSecondDoseByPublishDate":"newPeopleVaccinatedSecondDoseByPublishDate",
-        "cumPeopleVaccinatedFirstDoseByPublishDate":"cumPeopleVaccinatedFirstDoseByPublishDate",
-        "cumPeopleVaccinatedSecondDoseByPublishDate":"cumPeopleVaccinatedSecondDoseByPublishDate",
-        "weeklyPeopleVaccinatedFirstDoseByVaccinationDate":"weeklyPeopleVaccinatedFirstDoseByVaccinationDate",
-        "cumPeopleVaccinatedFirstDoseByVaccinationDate":"cumPeopleVaccinatedFirstDoseByVaccinationDate",
-        "weeklyPeopleVaccinatedSecondDoseByVaccinationDate":"weeklyPeopleVaccinatedSecondDoseByVaccinationDate",
-        "cumPeopleVaccinatedSecondDoseByVaccinationDate":"cumPeopleVaccinatedSecondDoseByVaccinationDate",
-        "newCasesByPublishDate": "newCasesByPublishDate",
-        "cumCasesByPublishDate": "cumCasesByPublishDate",
-        "newDeathsByDeathDate": "newDeathsByDeathDate",
-        "cumDeathsByDeathDate": "cumDeathsByDeathDate"
-    }
-
-    api = Cov19API(
-        filters=all_nations,
-        structure=get_data,
-        latest_by="newPeopleVaccinatedFirstDoseByPublishDate"
-    )
-
-    last_update = api.get_json()['lastUpdate']
-    last_update = datetime.fromisoformat(last_update[:-1])
-    last_update = last_update.strftime("%a %d %b %H:%M")
-
-    api = Cov19API(
-        filters=all_nations,
-        structure=get_data
-    )
-
-    full_df = api.get_dataframe()
-    cases_df = full_df.copy()
-    df = full_df.copy()
-    
-    cases_df = cases_df[['date', 'areaName', 'newCasesByPublishDate', 'newDeathsByDeathDate']]
-    cases_df.columns = ['date', 'area', 'daily_cases', 'daily_deaths']
-    cases_df['date'] = pd.to_datetime(cases_df['date'], format="%Y-%m-%d")
-    cases_df = cases_df.groupby('date').sum().reset_index()
-
-    cases_df['daily_rolling_average'] = cases_df['daily_cases'].rolling(window=7).mean()
-    cases_df = cases_df.dropna()
-    cases_df['days_since_start'] = cases_df['date'].apply(lambda x: (x - datetime(2021,1,9)).days)
-
-    recent_df = cases_df.copy()
-    recent_df = recent_df[recent_df['date']>datetime.strptime("9 January, 2021", "%d %B, %Y")]
-
-    pars, cov = curve_fit(f=exponential, xdata=recent_df['days_since_start'], 
-                              ydata=recent_df['daily_rolling_average'], maxfev=1000)
-    recent_df.loc[:, 'fit'] = recent_df['days_since_start'].apply(lambda x: exponential(x, *pars))
+def get_vaccinations(df):
     
     df = df[['date', 'areaName', 'newPeopleVaccinatedFirstDoseByPublishDate', 
              'cumPeopleVaccinatedFirstDoseByPublishDate', 'cumPeopleVaccinatedFirstDoseByVaccinationDate',
@@ -80,7 +25,7 @@ def get_covid_data():
              'cumPeopleVaccinatedSecondDoseByVaccinationDate']]
     df.columns = ['date', 'area', 'daily_first_dose', 'cum_first_dose', 'cum_first_dose_weekly',
                  'daily_second_dose', 'cum_second_dose', 'cum_second_dose_weekly']
-    df['date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
+    df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
     df = df[df['date']>=datetime.strptime("8 December, 2020", "%d %B, %Y")]
 
     df = df.groupby('date').sum().reset_index()
@@ -167,9 +112,116 @@ def get_covid_data():
             df.loc[row+21, 'cum_immune'] = np.nan
             df.loc[row+21, 'cum_immune_projected'] = df.loc[row, 'projection_second']
             
-    
+    return df, rolling_avg, end_date
 
-    return df, last_update, rolling_avg, end_date, recent_df
+
+def get_cases(df):
+    
+    df = df[['date', 'areaName', 'newCasesByPublishDate']]
+    df.columns = ['date', 'area', 'daily_cases']
+    df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
+    df = df.groupby('date').sum().reset_index()
+
+    df['daily_rolling_average'] = df['daily_cases'].rolling(window=7).mean()
+    df = df.dropna()
+    df['days_since_start'] = df['date'].apply(lambda x: (x - datetime(2021,1,9)).days)
+
+    recent_df = df.copy()
+    recent_df = recent_df[recent_df['date']>datetime.strptime("9 January, 2021", "%d %B, %Y")]
+
+    pars, cov = curve_fit(f=exponential, 
+                          xdata=recent_df[recent_df['date']<datetime.strptime("9 February, 2021", "%d %B, %Y")]['days_since_start'], 
+                          ydata=recent_df[recent_df['date']<datetime.strptime("9 February, 2021", "%d %B, %Y")]['daily_rolling_average'], maxfev=1000)
+    recent_df.loc[:, 'fit'] = recent_df['days_since_start'].apply(lambda x: exponential(x, *pars))
+    return recent_df
+
+
+def get_deaths(df):
+    
+    df = df[['date', 'areaName', 'newDeaths28DaysByPublishDate']]
+    df.columns = ['date', 'area', 'daily_deaths']
+    df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
+    df = df.groupby('date').sum().reset_index()
+
+    df['daily_rolling_average'] = df['daily_deaths'].rolling(window=7).mean()
+    df = df.dropna()
+    df['days_since_start'] = df['date'].apply(lambda x: (x - datetime(2021,1,30)).days)
+
+    recent_df = df.copy()
+    recent_df = recent_df[recent_df['date']>datetime.strptime("30 January, 2021", "%d %B, %Y")]
+
+    pars, cov = curve_fit(f=exponential, xdata=recent_df[recent_df['date']<datetime.strptime("28 February, 2021", "%d %B, %Y")]['days_since_start'], 
+                              ydata=recent_df[recent_df['date']<datetime.strptime("28 February, 2021", "%d %B, %Y")]['daily_rolling_average'], maxfev=1000)
+    recent_df.loc[:, 'fit'] = recent_df['days_since_start'].apply(lambda x: exponential(x, *pars))
+    return recent_df
+
+
+def get_admissions(df):
+    
+    df = df[['date', 'areaName', 'newAdmissions']]
+    df.columns = ['date', 'area', 'daily_admissions']
+    df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
+    df = df.groupby('date').sum().reset_index()
+
+    df['daily_rolling_average'] = df['daily_admissions'].rolling(window=7).mean()
+    df = df.dropna()
+    df['days_since_start'] = df['date'].apply(lambda x: (x - datetime(2021,1,22)).days)
+
+    recent_df = df.copy()
+    recent_df = recent_df[recent_df['date']>datetime.strptime("22 January, 2021", "%d %B, %Y")]
+    recent_df = recent_df.iloc[:-7]
+
+    pars, cov = curve_fit(f=exponential, xdata=recent_df[recent_df['date']<datetime.strptime("22 February, 2021", "%d %B, %Y")]['days_since_start'], 
+                              ydata=recent_df[recent_df['date']<datetime.strptime("22 February, 2021", "%d %B, %Y")]['daily_rolling_average'], maxfev=1000)
+    recent_df.loc[:, 'fit'] = recent_df['days_since_start'].apply(lambda x: exponential(x, *pars))
+    return recent_df
+
+
+
+def get_covid_data():
+    all_nations = [
+    "areaType=nation"
+    ]
+
+    get_data = {
+        "date": "date",
+        "areaName": "areaName",
+        "newPeopleVaccinatedFirstDoseByPublishDate":"newPeopleVaccinatedFirstDoseByPublishDate",
+        "newPeopleVaccinatedSecondDoseByPublishDate":"newPeopleVaccinatedSecondDoseByPublishDate",
+        "cumPeopleVaccinatedFirstDoseByPublishDate":"cumPeopleVaccinatedFirstDoseByPublishDate",
+        "cumPeopleVaccinatedSecondDoseByPublishDate":"cumPeopleVaccinatedSecondDoseByPublishDate",
+        "weeklyPeopleVaccinatedFirstDoseByVaccinationDate":"weeklyPeopleVaccinatedFirstDoseByVaccinationDate",
+        "cumPeopleVaccinatedFirstDoseByVaccinationDate":"cumPeopleVaccinatedFirstDoseByVaccinationDate",
+        "weeklyPeopleVaccinatedSecondDoseByVaccinationDate":"weeklyPeopleVaccinatedSecondDoseByVaccinationDate",
+        "cumPeopleVaccinatedSecondDoseByVaccinationDate":"cumPeopleVaccinatedSecondDoseByVaccinationDate",
+        "newCasesByPublishDate": "newCasesByPublishDate",
+        "newDeaths28DaysByPublishDate": "newDeaths28DaysByPublishDate",
+        "newAdmissions": "newAdmissions"
+    }
+
+    api = Cov19API(
+        filters=all_nations,
+        structure=get_data,
+        latest_by="newPeopleVaccinatedFirstDoseByPublishDate"
+    )
+
+    last_update = api.get_json()['lastUpdate']
+    last_update = datetime.fromisoformat(last_update[:-1])
+    last_update = last_update.strftime("%a %d %b %H:%M")
+
+    api = Cov19API(
+        filters=all_nations,
+        structure=get_data
+    )
+
+    full_df = api.get_dataframe()
+    
+    recent_cases_df = get_cases(full_df)
+    recent_deaths_df = get_deaths(full_df)
+    recent_admissions_df = get_admissions(full_df)
+    vacc_df, rolling_avg, end_date = get_vaccinations(full_df)
+            
+    return vacc_df, last_update, rolling_avg, end_date, recent_cases_df, recent_deaths_df, recent_admissions_df
 
 
 def make_cum_vaccine_plot(df, end_date):
@@ -312,12 +364,12 @@ def make_cumulative_plot(df, x, y, x_title, y_title):
     return fig
 
 
-def make_7da_plot(df, log=False):
+def make_7da_plot(df, log=False, metric=''):
     fig = px.scatter(df, x='date', y='daily_rolling_average', 
                      labels={'date': 'Date (reported)', 
-                             'daily_rolling_average': 'Daily Cases (log scale)'}, 
+                             'daily_rolling_average': f'Daily {metric} - all ages (log scale)'}, 
                      log_y=log)
-    fig.update_traces(name='Cases (weekly average)', showlegend=True, marker_color=colors['maincolor'])
+    fig.update_traces(name=f'{metric} (weekly average)', showlegend=True, marker_color=colors['maincolor'])
     
     fig2 = px.line(df, x='date', y='fit')
     fig2.update_traces(name='Fit', showlegend=True, line_color='#000000')

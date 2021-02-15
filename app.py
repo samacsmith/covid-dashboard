@@ -6,15 +6,17 @@ from dash.dependencies import Input, Output
 from get_data import get_covid_data, make_cum_vaccine_plot, make_bar, make_gauge, make_7da_plot
 
 def update_data():
-    df, last_update, rolling_avg, end_date, recent_df = get_covid_data()
+    vacc_df, last_update, rolling_avg, end_date, recent_cases_df, recent_deaths_df, recent_admissions_df = get_covid_data()
 
-    cum_first_dose = make_cum_vaccine_plot(df, end_date)
-    daily_dose = make_bar(df.loc[(df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 'Daily Number of Doses (First and Second)', 'date', 'daily_total_doses', rolling_avg)
-    gauge_chart = make_gauge(df.set_index('date').loc[end_date, 'cum_first_dose'],
-                        df.set_index('date').loc[end_date+timedelta(days=-1), 'cum_first_dose'])
-    fitted_cases = make_7da_plot(recent_df, log=True)
+    cum_first_dose = make_cum_vaccine_plot(vacc_df, end_date)
+    daily_dose = make_bar(vacc_df.loc[(vacc_df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 'Daily Number of First Doses', 'date', 'daily_first_dose', rolling_avg)
+    gauge_chart = make_gauge(vacc_df.set_index('date').loc[end_date, 'cum_first_dose'],
+                        vacc_df.set_index('date').loc[end_date+timedelta(days=-1), 'cum_first_dose'])
+    fitted_cases = make_7da_plot(recent_cases_df, log=True, metric='Cases')
+    fitted_deaths = make_7da_plot(recent_deaths_df, log=True, metric='Deaths')
+    fitted_admissions = make_7da_plot(recent_admissions_df, log=True, metric='Admissions')
 
-    return last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases
+    return last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases, fitted_deaths, fitted_admissions
     
 
 def serve_layout():
@@ -24,8 +26,10 @@ def serve_layout():
     global daily_dose
     global gauge_chart
     global fitted_cases
+    global fitted_deaths
+    global fitted_admissions
 
-    last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases = update_data()
+    last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases, fitted_deaths, fitted_admissions = update_data()
     
     return html.Div(id='whole-page', className='container', children=[
 
@@ -50,7 +54,9 @@ def serve_layout():
                     selected_className="custom-tab--selected"),
             dcc.Tab(id='tab-2', label='Cases', value='tab-2', className="custom-tab",
                     selected_className="custom-tab--selected"),
-            dcc.Tab(id='tab-3', label='Deaths', value='tab-3', className="custom-tab",
+            dcc.Tab(id='tab-3', label='Healthcare', value='tab-3', className="custom-tab",
+                    selected_className="custom-tab--selected"),
+            dcc.Tab(id='tab-4', label='Deaths', value='tab-4', className="custom-tab",
                     selected_className="custom-tab--selected"),
 
         ]),
@@ -101,8 +107,21 @@ def render_content(tab):
         ])
 
     elif tab == 'tab-3':
-        return html.Div(id='whole-tab', children=[
-            html.H4('Some more detailed stuff about deaths....')
+        return html.Div(className='whole-tab', children=[
+            html.Div(className='row flex-container', children=[
+                html.Div(className='column pretty-container', children=[
+                            dcc.Graph(id='fitted-cases-admissions', className='plotly-graph', figure=fitted_admissions)
+                    ])                
+                ])
+        ])
+    
+    elif tab == 'tab-4':
+        return html.Div(className='whole-tab', children=[
+            html.Div(className='row flex-container', children=[
+                html.Div(className='column pretty-container', children=[
+                            dcc.Graph(id='fitted-cases-deaths', className='plotly-graph', figure=fitted_deaths)
+                    ])                
+                ])
         ])
 
 
@@ -114,7 +133,8 @@ if __name__ == '__main__':
 To Do:
 1) User defined vaccination efficacy (for number immune and cases)
 2) Headline figures/dates
-3) log plot with quadratic -- cases, hospitalisations and deaths
+3) quadratic fit to cases, admissions, deaths -- when appropriate
 4) % comparison for things (e.g. % >80 hospital admissions)
 5) Update number in each priority group and stop first doses after all done
+6) explainers for each graph
 '''
