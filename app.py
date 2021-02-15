@@ -41,7 +41,7 @@ def serve_layout():
         ]),
 
         html.Div(id='updates', className='three columns', children=[
-            html.H5(children=f'Data up to: {last_update}', style={'text-align': 'right', 'font-family': "Roboto Mono", 'font-size': '0.8rem'}),
+            html.H5(children=f'Data last updated: {last_update}', style={'text-align': 'right', 'font-family': "Roboto Mono", 'font-size': '0.8rem'}),
             html.H5(children=f'Page last updated: {datetime.now().strftime("%a %d %b %H:%M")}', style={'text-align': 'right', 'font-family': "Roboto Mono", 'font-size': '0.8rem'})            
         ])    
     ]),
