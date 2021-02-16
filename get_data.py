@@ -392,7 +392,7 @@ def make_cum_vaccine_plot(df, end_date):
 
     fig=px.line(df, x='date', y='cum_first_dose',
                 labels={'date': 'Date (reported)', 'cum_first_dose': 'Cumulative Doses'})
-    fig.update_traces(name='Total First', showlegend=True, line_color=colors['maincolor'], 
+    fig.update_traces(name='Total First Doses', showlegend=True, line_color=colors['maincolor'], 
                       hovertemplate='%{y:,.0f}', line=dict(width=3))
 
     sda = df.set_index('date').loc[end_date, 'daily_rolling_average_total']
@@ -403,7 +403,7 @@ def make_cum_vaccine_plot(df, end_date):
 
     fig3=px.line(df, x='date', y='cum_second_dose',
                 labels={'date': 'Date (reported)', 'cum_first_dose': 'Cumulative Second Doses'})
-    fig3.update_traces(name='Total Second', showlegend=True, line_color=colors['monzo'], 
+    fig3.update_traces(name='Total Second Doses', showlegend=True, line_color=colors['monzo'], 
                        hovertemplate='%{y:,.0f}', line=dict(width=3))
 
     fig4 = px.line(df, x='date', y='projection_second')
