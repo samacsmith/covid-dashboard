@@ -177,6 +177,160 @@ def get_admissions(df):
     return recent_df
 
 
+def get_admissions_by_age(df):
+    
+    age_groups = {
+        'under_65s': ['0_to_5', '6_to_17', '18_to_64'],
+        'over_65s': ['65_to_84', '85+']
+    }
+    
+    df = df[['date', 'areaName', 'cumAdmissionsByAge']]
+    admissions_by_age = {}
+    for row, col in df.iterrows():
+        if col[2]:
+            admissions_by_age[col[0]] = {}
+            for i in col[2]:
+                admissions_by_age[col[0]][i['age']] = i['rate']
+
+    admissions_by_age_df = pd.DataFrame(admissions_by_age)
+    admissions_by_age_df = admissions_by_age_df.T.reset_index().rename(columns={'index':'date'}).sort_values('date').reset_index(drop=True)
+    admissions_by_age_df.loc[:, 'date'] = pd.to_datetime(admissions_by_age_df['date'], format="%Y-%m-%d")
+
+    for group in age_groups.keys():
+        admissions_by_age_df[group] = admissions_by_age_df[age_groups[group]].sum(axis=1)
+    cols = ['date']
+    cols.extend(list(age_groups.keys()))
+    admissions_by_age_df = admissions_by_age_df[cols]
+
+    for group in age_groups.keys():
+        admissions_by_age_df[f'{group}_daily'] = 0
+
+    for row, col in admissions_by_age_df.iterrows():
+        for i in range(1, len(age_groups.keys())+1):
+            if row == 0:
+                admissions_by_age_df.iloc[row, i+len(age_groups.keys())] = admissions_by_age_df.iloc[row, i]
+            else:
+                admissions_by_age_df.iloc[row, i+len(age_groups.keys())] = admissions_by_age_df.iloc[row, i] - admissions_by_age_df.iloc[row-1, i]
+
+    for group in age_groups.keys():
+        admissions_by_age_df[f'{group}_daily_rolling_average'] = admissions_by_age_df[f'{group}_daily'].rolling(window=7, 
+                                                                         min_periods=7, center=True).mean()
+        max_val = admissions_by_age_df[f'{group}_daily_rolling_average'].max()
+        admissions_by_age_df[f'{group}_indexed'] = admissions_by_age_df[f'{group}_daily_rolling_average'].apply(lambda x: 100*x/max_val)
+
+    admissions_by_age_df = admissions_by_age_df[admissions_by_age_df['date']>datetime(2020,12,1)].reset_index(drop=True)
+    cols_to_keep = [f'{group}_indexed' for group in age_groups.keys()]
+    cols_to_keep.append('date')
+    admissions_by_age_df = admissions_by_age_df[cols_to_keep]
+    return admissions_by_age_df, age_groups
+
+
+def get_cases_by_age(df):
+    
+    age_groups = {
+        'under_80s': ['0_to_4', '5_to_9', '10_to_14', '15_to_19', '20_to_24',
+                       '25_to_29', '30_to_34', '35_to_39', '40_to_44', '45_to_49', '50_to_54',
+                       '55_to_59', '60_to_64', '65_to_69', '70_to_74', '75_to_79'],
+        'over_80s': ['80_to_84', '85_to_89', '90+']
+    }
+    
+    df = df[['date', 'areaName', 'maleCases', 'femaleCases']]
+    cases_by_age_male = {}
+    cases_by_age_female = {}
+    for row, col in df.iterrows():
+        if col[2]:
+            cases_by_age_male[col[0]] = {}
+            for i in col[2]:
+                cases_by_age_male[col[0]][i['age']] = i['value']
+        if col[3]:
+            cases_by_age_female[col[0]] = {}
+            for i in col[3]:
+                cases_by_age_female[col[0]][i['age']] = i['value']
+        
+
+    cases_by_age_male_df = pd.DataFrame(cases_by_age_male)
+    cases_by_age_male_df = cases_by_age_male_df.T.reset_index().rename(columns={'index':'date'}).sort_values('date').reset_index(drop=True)
+    cases_by_age_male_df = cases_by_age_male_df.groupby('date').sum().reset_index()
+    cases_by_age_female_df = pd.DataFrame(cases_by_age_female)
+    cases_by_age_female_df = cases_by_age_female_df.T.reset_index().rename(columns={'index':'date'}).sort_values('date').reset_index(drop=True)
+    cases_by_age_female_df = cases_by_age_female_df.groupby('date').sum().reset_index()
+    
+    cases_by_age_df = cases_by_age_male_df.set_index('date') + cases_by_age_male_df.set_index('date')
+    cases_by_age_df = cases_by_age_df.reset_index()
+    cases_by_age_df.loc[:, 'date'] = pd.to_datetime(cases_by_age_df['date'], format="%Y-%m-%d")
+    cases_by_age_df = cases_by_age_df.iloc[:-4]
+
+    for group in age_groups.keys():
+        cases_by_age_df[group] = cases_by_age_df[age_groups[group]].sum(axis=1)
+    cols = ['date']
+    cols.extend(list(age_groups.keys()))
+    cases_by_age_df = cases_by_age_df[cols]
+
+    for group in age_groups.keys():
+        cases_by_age_df[f'{group}_daily'] = 0
+
+    for row, col in cases_by_age_df.iterrows():
+        for i in range(1, len(age_groups.keys())+1):
+            if row == 0:
+                cases_by_age_df.iloc[row, i+len(age_groups.keys())] = cases_by_age_df.iloc[row, i]
+            else:
+                cases_by_age_df.iloc[row, i+len(age_groups.keys())] = cases_by_age_df.iloc[row, i] - cases_by_age_df.iloc[row-1, i]
+
+    for group in age_groups.keys():
+        cases_by_age_df[f'{group}_daily_rolling_average'] = cases_by_age_df[f'{group}_daily'].rolling(window=7, 
+                                                                         min_periods=7, center=True).mean()
+        max_val = cases_by_age_df[f'{group}_daily_rolling_average'].max()
+        cases_by_age_df[f'{group}_indexed'] = cases_by_age_df[f'{group}_daily_rolling_average'].apply(lambda x: 100*x/max_val)
+
+    cases_by_age_df = cases_by_age_df[cases_by_age_df['date']>datetime(2020,12,1)].reset_index(drop=True)
+    cols_to_keep = [f'{group}_indexed' for group in age_groups.keys()]
+    cols_to_keep.append('date')
+    cases_by_age_df = cases_by_age_df[cols_to_keep]
+    return cases_by_age_df, age_groups
+
+
+def get_deaths_by_age(df):
+    
+    age_groups = {
+        'under_80s': ['00_04', '10_14', '15_19', '20_24', '25_29', '30_34', '35_39',
+                       '40_44', '45_49', '50_54', '55_59', '05_09', '60_64', 
+                     '65_69', '70_74', '75_79'],
+        'over_80s': ['80_84', '85_89', '90+']
+    }
+    
+    df = df[['date', 'areaName', 'newDeaths28DaysByDeathDateAgeDemographics']]
+    df = df[df['areaName'] == 'England']
+    deaths_by_age = {}
+    for row, col in df.iterrows():
+        if col[2]:
+            deaths_by_age[col[0]] = {}
+            for i in col[2]:
+                deaths_by_age[col[0]][i['age']] = i['deaths']
+        
+    deaths_by_age_df = pd.DataFrame(deaths_by_age)
+    deaths_by_age_df = deaths_by_age_df.T.reset_index().rename(columns={'index':'date'}).sort_values('date').reset_index(drop=True)
+    deaths_by_age_df = deaths_by_age_df.groupby('date').sum().reset_index()
+
+    deaths_by_age_df.loc[:, 'date'] = pd.to_datetime(deaths_by_age_df['date'], format="%Y-%m-%d")
+
+    for group in age_groups.keys():
+        deaths_by_age_df[group] = deaths_by_age_df[age_groups[group]].sum(axis=1)
+    cols = ['date']
+    cols.extend(list(age_groups.keys()))
+    deaths_by_age_df = deaths_by_age_df[cols]
+
+    for group in age_groups.keys():
+        deaths_by_age_df[f'{group}_daily_rolling_average'] = deaths_by_age_df[f'{group}'].rolling(window=7, 
+                                                                         min_periods=7, center=True).mean()
+        max_val = deaths_by_age_df[f'{group}_daily_rolling_average'].max()
+        deaths_by_age_df[f'{group}_indexed'] = deaths_by_age_df[f'{group}_daily_rolling_average'].apply(lambda x: 100*x/max_val)
+
+    deaths_by_age_df = deaths_by_age_df[deaths_by_age_df['date']>datetime(2020,12,1)].reset_index(drop=True)
+    cols_to_keep = [f'{group}_indexed' for group in age_groups.keys()]
+    cols_to_keep.append('date')
+    deaths_by_age_df = deaths_by_age_df[cols_to_keep]
+    return deaths_by_age_df, age_groups
+
 
 def get_covid_data():
     all_nations = [
@@ -196,7 +350,11 @@ def get_covid_data():
         "cumPeopleVaccinatedSecondDoseByVaccinationDate":"cumPeopleVaccinatedSecondDoseByVaccinationDate",
         "newCasesByPublishDate": "newCasesByPublishDate",
         "newDeaths28DaysByPublishDate": "newDeaths28DaysByPublishDate",
-        "newAdmissions": "newAdmissions"
+        "newAdmissions": "newAdmissions",
+        "cumAdmissionsByAge": "cumAdmissionsByAge",
+        "maleCases": "maleCases",
+        "femaleCases": "femaleCases",
+        "newDeaths28DaysByDeathDateAgeDemographics": "newDeaths28DaysByDeathDateAgeDemographics"
     }
 
     api = Cov19API(
@@ -217,42 +375,51 @@ def get_covid_data():
     full_df = api.get_dataframe()
     
     recent_cases_df = get_cases(full_df)
+    cases_by_age_df, cases_age_groups = get_cases_by_age(full_df)
     recent_deaths_df = get_deaths(full_df)
+    deaths_by_age_df, deaths_age_groups = get_deaths_by_age(full_df)
     recent_admissions_df = get_admissions(full_df)
+    admissions_by_age_df, ad_age_groups  = get_admissions_by_age(full_df)
     vacc_df, rolling_avg, end_date = get_vaccinations(full_df)
             
-    return vacc_df, last_update, rolling_avg, end_date, recent_cases_df, recent_deaths_df, recent_admissions_df
+    return vacc_df, last_update, rolling_avg, end_date, recent_cases_df, \
+            recent_deaths_df, recent_admissions_df, admissions_by_age_df, \
+            ad_age_groups, cases_by_age_df, cases_age_groups, \
+            deaths_by_age_df, deaths_age_groups
 
 
 def make_cum_vaccine_plot(df, end_date):
 
     fig=px.line(df, x='date', y='cum_first_dose',
                 labels={'date': 'Date (reported)', 'cum_first_dose': 'Cumulative Doses'})
-    fig.update_traces(name='Total First', showlegend=True, line_color=colors['maincolor'], hovertemplate='%{y:,.0f}')
+    fig.update_traces(name='Total First', showlegend=True, line_color=colors['maincolor'], 
+                      hovertemplate='%{y:,.0f}', line=dict(width=3))
 
     sda = df.set_index('date').loc[end_date, 'daily_rolling_average_total']
     fig2 = px.line(df, x='date', y='projection_first')
     fig2.update_traces(name=f'Projection of first doses', 
                         showlegend=True, line_color=colors['maincolor'], 
-                       hovertemplate='%{y:,.0f}', line=dict(dash='dash'))
+                       hovertemplate='%{y:,.0f}', line=dict(dash='dash', width=3))
 
     fig3=px.line(df, x='date', y='cum_second_dose',
                 labels={'date': 'Date (reported)', 'cum_first_dose': 'Cumulative Second Doses'})
-    fig3.update_traces(name='Total Second', showlegend=True, line_color=colors['monzo'], hovertemplate='%{y:,.0f}')
+    fig3.update_traces(name='Total Second', showlegend=True, line_color=colors['monzo'], 
+                       hovertemplate='%{y:,.0f}', line=dict(width=3))
 
     fig4 = px.line(df, x='date', y='projection_second')
     fig4.update_traces(name=f'Projection of second doses', 
                         showlegend=True, line_color=colors['monzo'], 
-                       hovertemplate='%{y:,.0f}', line=dict(dash='dash'))
+                       hovertemplate='%{y:,.0f}', line=dict(dash='dash', width=3))
 
     fig5=px.line(df, x='date', y='cum_immune',
                 labels={'date': 'Date (reported)', 'cum_immune': 'Cumulative Immune'})
-    fig5.update_traces(name='Total Immune', showlegend=True, line_color='purple', hovertemplate='%{y:,.0f}')
+    fig5.update_traces(name='Total Immune', showlegend=True, line_color='purple', 
+                       hovertemplate='%{y:,.0f}', line=dict(width=3))
 
     fig6 = px.line(df, x='date', y='cum_immune_projected')
     fig6.update_traces(name=f'Projection of total immune', 
                         showlegend=True, line_color='purple', 
-                       hovertemplate='%{y:,.0f}', line=dict(dash='dash'))
+                       hovertemplate='%{y:,.0f}', line=dict(dash='dash', width=3))
 
     fig.add_trace(fig3.data[0])
     fig.add_trace(fig5.data[0])
@@ -305,7 +472,8 @@ def make_bar(df, x_title, y_title, x, y, rolling_avg):
     fig.update_traces(name=f'Daily Doses', marker_color=colors['maincolor'], hovertemplate='Daily: %{y:,.0f}', showlegend=True)
 
     fig2 = px.line(df, x=x, y='daily_rolling_average_total', line_shape='spline')
-    fig2.update_traces(name=f'{rolling_avg} day rolling average', showlegend=True, line_color='#000000', hovertemplate='%{y:,.0f}')
+    fig2.update_traces(name=f'{rolling_avg} day rolling average', showlegend=True, line_color='#000000', 
+                       hovertemplate='%{y:,.0f}', line=dict(width=3))
 
     fig.add_trace(fig2.data[0])
 
@@ -358,7 +526,7 @@ def make_cumulative_plot(df, x, y, x_title, y_title):
 
     fig.update_traces(line_color=colors['maincolor'], hovertemplate='%{y}')
 
-    fig.update_layout(yaxis=dict(tickformat=',.0f'),xaxis=dict(showgrid=False),
+    fig.update_layout(yaxis=dict(tickformat=',.0f', showgrid=False), xaxis=dict(showgrid=False),
                         font=dict(family="IBM Plex Sans", size=12, color="#000000"),hovermode="x unified")
 
     return fig
@@ -369,14 +537,17 @@ def make_7da_plot(df, log=False, metric=''):
                      labels={'date': 'Date (reported)', 
                              'daily_rolling_average': f'Daily {metric} - all ages (log scale)'}, 
                      log_y=log)
-    fig.update_traces(name=f'{metric} (weekly average)', showlegend=True, marker_color=colors['maincolor'])
+    fig.update_traces(name=f'{metric} (rolling weekly average)', 
+                      showlegend=True, marker_color=colors['maincolor'])
     
     fig2 = px.line(df, x='date', y='fit')
-    fig2.update_traces(name='Fit', showlegend=True, line_color='#000000')
+    fig2.update_traces(name='Fit', showlegend=True, line_color='#000000', line=dict(width=3))
     
     fig.add_trace(fig2.data[0])
 
-    fig.update_layout(yaxis=dict(tickformat=',.0f'),font=dict(size=12, color="#000000"), 
+    fig.update_layout(yaxis=dict(tickformat=',.0f', showgrid=False),
+                      xaxis=dict(showgrid=False),
+                      font=dict(size=12, color="#000000"), 
                       showlegend=True,
                       legend={"orientation": "h",
                               "xanchor": "center",
@@ -384,6 +555,32 @@ def make_7da_plot(df, log=False, metric=''):
                               'y': -0.2,
                               'font': dict(size=11)
                              },
+                      hovermode="x unified")
+
+    fig.update_traces(hovertemplate='%{y}')
+
+    return fig
+
+
+def make_indexed_plot(df, groups, log=False, metric=''):
+    groups.append('date')
+    df.columns = groups
+    fig = px.line(df, x='date', y=groups, log_y=log, 
+                  color_discrete_sequence=[colors['maincolor'], '#fe7f9c', '#0b6623'],
+                  labels={'date': 'Date (reported)','value': f'Daily {metric} - percentage of winter peak'})
+    fig.update_traces(line=dict(width=3))
+
+    fig.update_layout(yaxis=dict(ticksuffix = '%', tickformat=',.0f', showgrid=False),
+                      xaxis=dict(showgrid=False),
+                      font=dict(size=12, color="#000000"), 
+                      showlegend=True,
+                      legend={"orientation": "h",
+                              "xanchor": "center",
+                              'x': 0.5,
+                              'y': -0.2,
+                              'font': dict(size=11)
+                             },
+                      legend_title_text=None,
                       hovermode="x unified")
 
     fig.update_traces(hovertemplate='%{y}')

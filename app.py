@@ -3,10 +3,13 @@ import dash_core_components as dcc
 import dash_html_components as html
 from datetime import datetime, timedelta
 from dash.dependencies import Input, Output
-from get_data import get_covid_data, make_cum_vaccine_plot, make_bar, make_gauge, make_7da_plot
+from get_data import get_covid_data, make_cum_vaccine_plot, make_bar, make_gauge, make_7da_plot, make_indexed_plot
 
 def update_data():
-    vacc_df, last_update, rolling_avg, end_date, recent_cases_df, recent_deaths_df, recent_admissions_df = get_covid_data()
+    vacc_df, last_update, rolling_avg, end_date, recent_cases_df, \
+            recent_deaths_df, recent_admissions_df, admissions_by_age_df, \
+            ad_age_groups, cases_by_age_df, cases_age_groups, \
+            deaths_by_age_df, deaths_age_groups = get_covid_data()
 
     cum_first_dose = make_cum_vaccine_plot(vacc_df, end_date)
     daily_dose = make_bar(vacc_df.loc[(vacc_df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 'Daily Number of First Doses', 'date', 'daily_first_dose', rolling_avg)
@@ -15,8 +18,11 @@ def update_data():
     fitted_cases = make_7da_plot(recent_cases_df, log=True, metric='Cases')
     fitted_deaths = make_7da_plot(recent_deaths_df, log=True, metric='Deaths')
     fitted_admissions = make_7da_plot(recent_admissions_df, log=True, metric='Admissions')
+    age_admissions = make_indexed_plot(admissions_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in ad_age_groups.keys()], log=False, metric='Admissions')
+    age_cases = make_indexed_plot(cases_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in cases_age_groups.keys()], log=False, metric='Cases')
+    age_deaths = make_indexed_plot(deaths_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in deaths_age_groups.keys()], log=False, metric='Deaths')
 
-    return last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases, fitted_deaths, fitted_admissions
+    return last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases, fitted_deaths, fitted_admissions, age_admissions, age_cases, age_deaths
     
 
 def serve_layout():
@@ -28,8 +34,13 @@ def serve_layout():
     global fitted_cases
     global fitted_deaths
     global fitted_admissions
+    global age_admissions
+    global age_cases
+    global age_deaths
 
-    last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases, fitted_deaths, fitted_admissions = update_data()
+    last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases, fitted_deaths, fitted_admissions, age_admissions, age_cases, age_deaths = update_data()
+
+
     
     return html.Div(id='whole-page', className='container', children=[
 
@@ -100,27 +111,36 @@ def render_content(tab):
     elif tab == 'tab-2':
         return html.Div(className='whole-tab', children=[
             html.Div(className='row flex-container', children=[
-                html.Div(className='column pretty-container', children=[
+                html.Div(className='one-half column pretty-container', children=[
                             dcc.Graph(id='fitted-cases-graph', className='plotly-graph', figure=fitted_cases)
-                    ])                
+                    ]),
+                html.Div(className='one-half column pretty-container', children=[
+                            dcc.Graph(id='age-cases-graph', className='plotly-graph', figure=age_cases)
+                    ])
                 ])
         ])
 
     elif tab == 'tab-3':
         return html.Div(className='whole-tab', children=[
             html.Div(className='row flex-container', children=[
-                html.Div(className='column pretty-container', children=[
-                            dcc.Graph(id='fitted-cases-admissions', className='plotly-graph', figure=fitted_admissions)
-                    ])                
+                html.Div(className='one-half column pretty-container', children=[
+                            dcc.Graph(id='fitted-admissions-graph', className='plotly-graph', figure=fitted_admissions)
+                    ]),
+                html.Div(className='one-half column pretty-container', children=[
+                            dcc.Graph(id='age-admissions-graph', className='plotly-graph', figure=age_admissions)
+                    ])
                 ])
         ])
     
     elif tab == 'tab-4':
         return html.Div(className='whole-tab', children=[
             html.Div(className='row flex-container', children=[
-                html.Div(className='column pretty-container', children=[
-                            dcc.Graph(id='fitted-cases-deaths', className='plotly-graph', figure=fitted_deaths)
-                    ])                
+                html.Div(className='one-half column pretty-container', children=[
+                            dcc.Graph(id='fitted-deaths-graph', className='plotly-graph', figure=fitted_deaths)
+                    ]),
+                html.Div(className='one-half column pretty-container', children=[
+                            dcc.Graph(id='age-deaths-graph', className='plotly-graph', figure=age_deaths)
+                    ])
                 ])
         ])
 
