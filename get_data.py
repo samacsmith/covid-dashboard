@@ -567,7 +567,7 @@ def make_indexed_plot(df, groups, log=False, metric=''):
     df.columns = groups
     fig = px.line(df, x='date', y=groups, log_y=log, 
                   color_discrete_sequence=[colors['maincolor'], '#fe7f9c', '#0b6623'],
-                  labels={'date': 'Date (reported)','value': f'Daily {metric} - percentage of winter peak'})
+                  labels={'date': 'Date','value': f'Daily {metric} - percentage of winter peak'})
     fig.update_traces(line=dict(width=3))
 
     fig.update_layout(yaxis=dict(ticksuffix = '%', tickformat=',.0f', showgrid=False),
