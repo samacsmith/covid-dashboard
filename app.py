@@ -11,8 +11,10 @@ def update_data():
             ad_age_groups, cases_by_age_df, cases_age_groups, \
             deaths_by_age_df, deaths_age_groups = get_covid_data()
 
+    vacc_df = vacc_df.rename(columns={'daily_first_dose': 'First Dose', 'daily_second_dose': 'Second Dose'})
+
     cum_first_dose = make_cum_vaccine_plot(vacc_df, end_date)
-    daily_dose = make_bar(vacc_df.loc[(vacc_df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 'Daily Number of First Doses', 'date', 'daily_first_dose', rolling_avg)
+    daily_dose = make_bar(vacc_df.loc[(vacc_df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 'Daily Number of Doses', 'date', ["First Dose", "Second Dose"], rolling_avg)
     gauge_chart = make_gauge(vacc_df.set_index('date').loc[end_date, 'cum_first_dose'],
                         vacc_df.set_index('date').loc[end_date+timedelta(days=-1), 'cum_first_dose'])
     fitted_cases = make_7da_plot(recent_cases_df, log=True, metric='Cases')
@@ -23,7 +25,7 @@ def update_data():
     age_deaths = make_indexed_plot(deaths_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in deaths_age_groups.keys()], log=False, metric='Deaths')
 
     return last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases, fitted_deaths, fitted_admissions, age_admissions, age_cases, age_deaths
-    
+
 
 def serve_layout():
 
@@ -157,4 +159,5 @@ To Do:
 4) % comparison for things (e.g. % >80 hospital admissions)
 5) Update number in each priority group and stop first doses after all done
 6) explainers for each graph
+7) fix cumulative projections dropping
 '''

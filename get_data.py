@@ -467,18 +467,22 @@ def make_cum_vaccine_plot(df, end_date):
 
 
 def make_bar(df, x_title, y_title, x, y, rolling_avg):
-    fig=px.bar(df, x=x, y=y,labels={x: x_title, y: y_title})
-    
-    fig.update_traces(name=f'Daily Doses', marker_color=colors['maincolor'], hovertemplate='Daily: %{y:,.0f}', showlegend=True)
+    fig=px.bar(df, x=x, y=y,labels={x: x_title, 'value': y_title},
+               color_discrete_sequence=[colors['maincolor'], colors['monzo']])
+        
+    fig.update_traces(hovertemplate='%{y:,.0f}', showlegend=True)
 
     fig2 = px.line(df, x=x, y='daily_rolling_average_total', line_shape='spline')
     fig2.update_traces(name=f'{rolling_avg} day rolling average', showlegend=True, line_color='#000000', 
-                       hovertemplate='%{y:,.0f}', line=dict(width=3))
+                       hovertext=df['daily_total_doses'], 
+                       hovertemplate='%{y:,.0f}<br><br>Total Daily Doses: %{hovertext:,.0f}', 
+                       line=dict(width=3))
 
     fig.add_trace(fig2.data[0])
 
-    fig.update_layout(yaxis=dict(tickformat=',0.f', showgrid=False),xaxis=dict(showgrid=False),hovermode='x unified',showlegend= True,
-                      font=dict(size=11),
+    fig.update_layout(yaxis=dict(tickformat=',0.f', showgrid=False),xaxis=dict(showgrid=False),
+                      hovermode='x unified',showlegend= True,
+                      font=dict(size=11),legend_title_text=None,
                             legend={"orientation": "h",
                               "xanchor": "center",
                               'x': 0.5,
