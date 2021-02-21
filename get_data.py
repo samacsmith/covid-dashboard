@@ -84,21 +84,21 @@ def get_vaccinations(df):
             if col[0] >= start_date+timedelta(weeks=12):
                 if col[0] > end_date+timedelta(weeks=12):
                     df.loc[row, 'projection_second'] = df.loc[row-1, 'projection_second'] + \
-                                                    (df.loc[row-84, 'projection_first'] - df.loc[row-85, 'projection_first'])
+                                                    max((df.loc[row-84, 'projection_first'] - df.loc[row-85, 'projection_first']), 0)
                     df.loc[row, 'projection_first'] = df.loc[row-1, 'projection_first'] + \
-                                                    (df.loc[row-1, 'daily_rolling_average_total'] - \
-                                                    (df.loc[row-84, 'projection_first'] - df.loc[row-85, 'projection_first']))
+                                                    max((df.loc[row, 'daily_rolling_average_total'] - \
+                                                    (df.loc[row-84, 'projection_first'] - df.loc[row-85, 'projection_first'])), 0)
                 else:
                     df.loc[row, 'projection_second'] = df.loc[row-1, 'projection_second'] + \
-                                                    df.loc[row-84, 'daily_first_dose']
+                                                    max(df.loc[row-84, 'daily_first_dose'], 0)
                     df.loc[row, 'projection_first'] = df.loc[row-1, 'projection_first'] + \
-                                                    (df.loc[row-1, 'daily_rolling_average_total'] - \
-                                                    df.loc[row-84, 'daily_first_dose'])
+                                                    max((df.loc[row, 'daily_rolling_average_total'] - \
+                                                    df.loc[row-84, 'daily_first_dose']), 0)
             else:
                 df.loc[row, 'projection_first'] = df.loc[row-1, 'projection_first'] + \
-                                                df.loc[row-1, 'daily_rolling_average_first']
+                                                df.loc[row, 'daily_rolling_average_first']
                 df.loc[row, 'projection_second'] = df.loc[row-1, 'projection_second'] + \
-                                                    df.loc[row-1, 'daily_rolling_average_second']
+                                                    df.loc[row, 'daily_rolling_average_second']
     for row, col in df.iterrows():
         if col[0] < (end_date + timedelta(days=-21)):
             df.loc[row+21, 'cum_immune'] = df.loc[row, 'cum_second_dose']
@@ -130,8 +130,8 @@ def get_cases(df):
     recent_df = recent_df[recent_df['date']>datetime.strptime("9 January, 2021", "%d %B, %Y")]
 
     pars, cov = curve_fit(f=exponential, 
-                          xdata=recent_df[recent_df['date']<datetime.strptime("9 February, 2021", "%d %B, %Y")]['days_since_start'], 
-                          ydata=recent_df[recent_df['date']<datetime.strptime("9 February, 2021", "%d %B, %Y")]['daily_rolling_average'], maxfev=1000)
+                          xdata=recent_df[recent_df['date']<datetime.strptime("20 February, 2021", "%d %B, %Y")]['days_since_start'], 
+                          ydata=recent_df[recent_df['date']<datetime.strptime("20 February, 2021", "%d %B, %Y")]['daily_rolling_average'], maxfev=1000)
     recent_df.loc[:, 'fit'] = recent_df['days_since_start'].apply(lambda x: exponential(x, *pars))
     return recent_df
 
