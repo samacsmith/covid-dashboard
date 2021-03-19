@@ -81,19 +81,19 @@ def get_vaccinations(df):
             df.loc[row, 'daily_rolling_average_first'] = df.loc[row-1, 'daily_rolling_average_first']
             df.loc[row, 'daily_rolling_average_second'] = df.loc[row-1, 'daily_rolling_average_second']
             df.loc[row, 'daily_rolling_average_total'] = df.loc[row-1, 'daily_rolling_average_total']
-            if col[0] >= start_date+timedelta(weeks=12):
-                if col[0] > end_date+timedelta(weeks=12):
+            if col[0] >= start_date+timedelta(weeks=11):
+                if col[0] > end_date+timedelta(weeks=11):
                     df.loc[row, 'projection_second'] = df.loc[row-1, 'projection_second'] + \
-                                                    max((df.loc[row-84, 'projection_first'] - df.loc[row-85, 'projection_first']), 0)
+                                                    max((df.loc[row-77, 'projection_first'] - df.loc[row-78, 'projection_first']), 0)
                     df.loc[row, 'projection_first'] = df.loc[row-1, 'projection_first'] + \
                                                     max((df.loc[row, 'daily_rolling_average_total'] - \
-                                                    (df.loc[row-84, 'projection_first'] - df.loc[row-85, 'projection_first'])), 0)
+                                                    (df.loc[row-77, 'projection_first'] - df.loc[row-78, 'projection_first'])), 0)
                 else:
                     df.loc[row, 'projection_second'] = df.loc[row-1, 'projection_second'] + \
-                                                    max(df.loc[row-84, 'daily_first_dose'], 0)
+                                                    max(df.loc[row-77, 'daily_first_dose'], 0)
                     df.loc[row, 'projection_first'] = df.loc[row-1, 'projection_first'] + \
                                                     max((df.loc[row, 'daily_rolling_average_total'] - \
-                                                    df.loc[row-84, 'daily_first_dose']), 0)
+                                                    df.loc[row-77, 'daily_first_dose']), 0)
             else:
                 df.loc[row, 'projection_first'] = df.loc[row-1, 'projection_first'] + \
                                                 df.loc[row, 'daily_rolling_average_first']
@@ -122,18 +122,19 @@ def get_cases(df):
     df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
     df = df.groupby('date').sum().reset_index()
 
-    df['daily_rolling_average'] = df['daily_cases'].rolling(window=7).mean()
+    df['daily_rolling_average'] = df['daily_cases'].rolling(window=7, min_periods=7, center=True).mean()
     df = df.dropna()
     df['days_since_start'] = df['date'].apply(lambda x: (x - datetime(2021,1,9)).days)
 
     recent_df = df.copy()
     recent_df = recent_df[recent_df['date']>datetime.strptime("9 January, 2021", "%d %B, %Y")]
 
+    fit_end = datetime.strptime("17 February, 2021", "%d %B, %Y")
     pars, cov = curve_fit(f=exponential, 
-                          xdata=recent_df[recent_df['date']<datetime.strptime("20 February, 2021", "%d %B, %Y")]['days_since_start'], 
-                          ydata=recent_df[recent_df['date']<datetime.strptime("20 February, 2021", "%d %B, %Y")]['daily_rolling_average'], maxfev=1000)
+                          xdata=recent_df[recent_df['date']<fit_end]['days_since_start'], 
+                          ydata=recent_df[recent_df['date']<fit_end]['daily_rolling_average'], maxfev=1000)
     recent_df.loc[:, 'fit'] = recent_df['days_since_start'].apply(lambda x: exponential(x, *pars))
-    return recent_df
+    return recent_df, fit_end
 
 
 def get_deaths(df):
@@ -143,17 +144,18 @@ def get_deaths(df):
     df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
     df = df.groupby('date').sum().reset_index()
 
-    df['daily_rolling_average'] = df['daily_deaths'].rolling(window=7).mean()
+    df['daily_rolling_average'] = df['daily_deaths'].rolling(window=7, min_periods=7, center=True).mean()
     df = df.dropna()
     df['days_since_start'] = df['date'].apply(lambda x: (x - datetime(2021,1,30)).days)
 
     recent_df = df.copy()
     recent_df = recent_df[recent_df['date']>datetime.strptime("30 January, 2021", "%d %B, %Y")]
 
-    pars, cov = curve_fit(f=exponential, xdata=recent_df[recent_df['date']<datetime.strptime("28 February, 2021", "%d %B, %Y")]['days_since_start'], 
-                              ydata=recent_df[recent_df['date']<datetime.strptime("28 February, 2021", "%d %B, %Y")]['daily_rolling_average'], maxfev=1000)
+    fit_end = datetime.strptime("22 February, 2021", "%d %B, %Y")
+    pars, cov = curve_fit(f=exponential, xdata=recent_df[recent_df['date']<fit_end]['days_since_start'], 
+                              ydata=recent_df[recent_df['date']<fit_end]['daily_rolling_average'], maxfev=1000)
     recent_df.loc[:, 'fit'] = recent_df['days_since_start'].apply(lambda x: exponential(x, *pars))
-    return recent_df
+    return recent_df, fit_end
 
 
 def get_admissions(df):
@@ -163,7 +165,7 @@ def get_admissions(df):
     df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
     df = df.groupby('date').sum().reset_index()
 
-    df['daily_rolling_average'] = df['daily_admissions'].rolling(window=7).mean()
+    df['daily_rolling_average'] = df['daily_admissions'].rolling(window=7, min_periods=7, center=True).mean()
     df = df.dropna()
     df['days_since_start'] = df['date'].apply(lambda x: (x - datetime(2021,1,22)).days)
 
@@ -171,10 +173,11 @@ def get_admissions(df):
     recent_df = recent_df[recent_df['date']>datetime.strptime("22 January, 2021", "%d %B, %Y")]
     recent_df = recent_df.iloc[:-7]
 
-    pars, cov = curve_fit(f=exponential, xdata=recent_df[recent_df['date']<datetime.strptime("22 February, 2021", "%d %B, %Y")]['days_since_start'], 
-                              ydata=recent_df[recent_df['date']<datetime.strptime("22 February, 2021", "%d %B, %Y")]['daily_rolling_average'], maxfev=1000)
+    fit_end = datetime.strptime("22 February, 2021", "%d %B, %Y")
+    pars, cov = curve_fit(f=exponential, xdata=recent_df[recent_df['date']<fit_end]['days_since_start'], 
+                              ydata=recent_df[recent_df['date']<fit_end]['daily_rolling_average'], maxfev=1000)
     recent_df.loc[:, 'fit'] = recent_df['days_since_start'].apply(lambda x: exponential(x, *pars))
-    return recent_df
+    return recent_df, fit_end
 
 
 def get_admissions_by_age(df):
@@ -228,10 +231,10 @@ def get_admissions_by_age(df):
 def get_cases_by_age(df):
     
     age_groups = {
-        'under_80s': ['0_to_4', '5_to_9', '10_to_14', '15_to_19', '20_to_24',
+        'under_65s': ['0_to_4', '5_to_9', '10_to_14', '15_to_19', '20_to_24',
                        '25_to_29', '30_to_34', '35_to_39', '40_to_44', '45_to_49', '50_to_54',
-                       '55_to_59', '60_to_64', '65_to_69', '70_to_74', '75_to_79'],
-        'over_80s': ['80_to_84', '85_to_89', '90+']
+                       '55_to_59', '60_to_64'],
+        'over_65s': ['65_to_69', '70_to_74', '75_to_79', '80_to_84', '85_to_89', '90+']
     }
     
     df = df[['date', 'areaName', 'maleCases', 'femaleCases']]
@@ -292,10 +295,9 @@ def get_cases_by_age(df):
 def get_deaths_by_age(df):
     
     age_groups = {
-        'under_80s': ['00_04', '10_14', '15_19', '20_24', '25_29', '30_34', '35_39',
-                       '40_44', '45_49', '50_54', '55_59', '05_09', '60_64', 
-                     '65_69', '70_74', '75_79'],
-        'over_80s': ['80_84', '85_89', '90+']
+        'under_65s': ['00_04', '10_14', '15_19', '20_24', '25_29', '30_34', '35_39',
+                       '40_44', '45_49', '50_54', '55_59', '05_09', '60_64'],
+        'over_65s': ['65_69', '70_74', '75_79', '80_84', '85_89', '90+']
     }
     
     df = df[['date', 'areaName', 'newDeaths28DaysByDeathDateAgeDemographics']]
@@ -374,17 +376,17 @@ def get_covid_data():
 
     full_df = api.get_dataframe()
     
-    recent_cases_df = get_cases(full_df)
+    recent_cases_df, recent_cases_fit_end = get_cases(full_df)
     cases_by_age_df, cases_age_groups = get_cases_by_age(full_df)
-    recent_deaths_df = get_deaths(full_df)
+    recent_deaths_df, recent_deaths_fit_end = get_deaths(full_df)
     deaths_by_age_df, deaths_age_groups = get_deaths_by_age(full_df)
-    recent_admissions_df = get_admissions(full_df)
+    recent_admissions_df, recent_admissions_fit_end = get_admissions(full_df)
     admissions_by_age_df, ad_age_groups  = get_admissions_by_age(full_df)
     vacc_df, rolling_avg, end_date = get_vaccinations(full_df)
             
-    return vacc_df, last_update, rolling_avg, end_date, recent_cases_df, \
-            recent_deaths_df, recent_admissions_df, admissions_by_age_df, \
-            ad_age_groups, cases_by_age_df, cases_age_groups, \
+    return vacc_df, last_update, rolling_avg, end_date, recent_cases_df, recent_cases_fit_end, \
+            recent_deaths_df, recent_deaths_fit_end, recent_admissions_df, recent_admissions_fit_end, \
+            admissions_by_age_df, ad_age_groups, cases_by_age_df, cases_age_groups, \
             deaths_by_age_df, deaths_age_groups
 
 
@@ -414,12 +416,12 @@ def make_cum_vaccine_plot(df, end_date):
     fig5=px.line(df, x='date', y='cum_immune',
                 labels={'date': 'Date (reported)', 'cum_immune': 'Cumulative Immune'})
     fig5.update_traces(name='Total Immune', showlegend=True, line_color='purple', 
-                       hovertemplate='%{y:,.0f}', line=dict(width=3))
+                       hovertemplate='%{y:,.0f}', line=dict(width=3), visible = "legendonly")
 
     fig6 = px.line(df, x='date', y='cum_immune_projected')
     fig6.update_traces(name=f'Projection of total immune', 
                         showlegend=True, line_color='purple', 
-                       hovertemplate='%{y:,.0f}', line=dict(dash='dash', width=3))
+                       hovertemplate='%{y:,.0f}', line=dict(dash='dash', width=3), visible = "legendonly")
 
     fig.add_trace(fig3.data[0])
     fig.add_trace(fig5.data[0])
@@ -474,7 +476,7 @@ def make_bar(df, x_title, y_title, x, y, rolling_avg):
 
     fig2 = px.line(df, x=x, y='daily_rolling_average_total', line_shape='spline',
                         custom_data=["daily_total_doses"],)
-    fig2.update_traces(name=f'{rolling_avg} day rolling average', showlegend=True, line_color='#000000',
+    fig2.update_traces(name=f'{rolling_avg} day rolling average (trailing)', showlegend=True, line_color='#000000',
                         hovertemplate='%{y:,.0f}<br>Total Daily Doses: %{customdata[0]:,.0f}',
                         line=dict(width=3))
 
@@ -536,16 +538,16 @@ def make_cumulative_plot(df, x, y, x_title, y_title):
     return fig
 
 
-def make_7da_plot(df, log=False, metric=''):
+def make_7da_plot(df, log=False, metric='', fit_end=datetime.now()+timedelta(days=-1)):
     fig = px.scatter(df, x='date', y='daily_rolling_average', 
                      labels={'date': 'Date (reported)', 
-                             'daily_rolling_average': f'Daily {metric} - all ages (log scale)'}, 
+                             'daily_rolling_average': f'Daily {metric}'}, 
                      log_y=log)
     fig.update_traces(name=f'{metric} (rolling weekly average)', 
                       showlegend=True, marker_color=colors['maincolor'])
     
     fig2 = px.line(df, x='date', y='fit')
-    fig2.update_traces(name='Fit', showlegend=True, line_color='#000000', line=dict(width=3))
+    fig2.update_traces(name=f'Fit (on data up to {fit_end.strftime("%d %B")})', showlegend=True, line_color='#000000', line=dict(width=3))
     
     fig.add_trace(fig2.data[0])
 
@@ -566,7 +568,7 @@ def make_7da_plot(df, log=False, metric=''):
     return fig
 
 
-def make_indexed_plot(df, groups, log=False, metric=''):
+def make_indexed_plot(df, groups, log=True, metric=''):
     groups.append('date')
     df.columns = groups
     fig = px.line(df, x='date', y=groups, log_y=log, 
@@ -574,7 +576,8 @@ def make_indexed_plot(df, groups, log=False, metric=''):
                   labels={'date': 'Date','value': f'Daily {metric} - percentage of winter peak'})
     fig.update_traces(line=dict(width=3))
 
-    fig.update_layout(yaxis=dict(ticksuffix = '%', tickformat=',.0f', showgrid=False),
+    fig.update_layout(yaxis=dict(ticksuffix='%', tickformat=',.0f', tickmode = 'array',
+                    tickvals = [1, 10, 20, 50, 70, 100], showgrid=False),
                       xaxis=dict(showgrid=False),
                       font=dict(size=12, color="#000000"), 
                       showlegend=True,

@@ -6,9 +6,9 @@ from dash.dependencies import Input, Output
 from get_data import get_covid_data, make_cum_vaccine_plot, make_bar, make_gauge, make_7da_plot, make_indexed_plot
 
 def update_data():
-    vacc_df, last_update, rolling_avg, end_date, recent_cases_df, \
-            recent_deaths_df, recent_admissions_df, admissions_by_age_df, \
-            ad_age_groups, cases_by_age_df, cases_age_groups, \
+    vacc_df, last_update, rolling_avg, end_date, recent_cases_df, recent_cases_fit_end, \
+            recent_deaths_df, recent_deaths_fit_end, recent_admissions_df, recent_admissions_fit_end, \
+            admissions_by_age_df, ad_age_groups, cases_by_age_df, cases_age_groups, \
             deaths_by_age_df, deaths_age_groups = get_covid_data()
 
     vacc_df = vacc_df.rename(columns={'daily_first_dose': 'First Dose', 'daily_second_dose': 'Second Dose'})
@@ -17,12 +17,12 @@ def update_data():
     daily_dose = make_bar(vacc_df.loc[(vacc_df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 'Daily Number of Doses', 'date', ["First Dose", "Second Dose"], rolling_avg)
     gauge_chart = make_gauge(vacc_df.set_index('date').loc[end_date, 'cum_first_dose'],
                         vacc_df.set_index('date').loc[end_date+timedelta(days=-1), 'cum_first_dose'])
-    fitted_cases = make_7da_plot(recent_cases_df, log=True, metric='Cases')
-    fitted_deaths = make_7da_plot(recent_deaths_df, log=True, metric='Deaths')
-    fitted_admissions = make_7da_plot(recent_admissions_df, log=True, metric='Admissions')
-    age_admissions = make_indexed_plot(admissions_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in ad_age_groups.keys()], log=False, metric='Admissions')
-    age_cases = make_indexed_plot(cases_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in cases_age_groups.keys()], log=False, metric='Cases')
-    age_deaths = make_indexed_plot(deaths_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in deaths_age_groups.keys()], log=False, metric='Deaths')
+    fitted_cases = make_7da_plot(recent_cases_df, log=True, metric='Cases', fit_end=recent_cases_fit_end)
+    fitted_deaths = make_7da_plot(recent_deaths_df, log=True, metric='Deaths', fit_end=recent_deaths_fit_end)
+    fitted_admissions = make_7da_plot(recent_admissions_df, log=True, metric='Admissions', fit_end=recent_admissions_fit_end)
+    age_admissions = make_indexed_plot(admissions_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in ad_age_groups.keys()], metric='Admissions')
+    age_cases = make_indexed_plot(cases_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in cases_age_groups.keys()], metric='Cases')
+    age_deaths = make_indexed_plot(deaths_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in deaths_age_groups.keys()], metric='Deaths')
 
     return last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases, fitted_deaths, fitted_admissions, age_admissions, age_cases, age_deaths
 
