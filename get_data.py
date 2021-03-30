@@ -565,8 +565,6 @@ def make_7da_plot(df, log=False, metric='', fit_end=datetime.now()+timedelta(day
     fig2.update_traces(name=f'Fit (on data up to {fit_end.strftime("%d %B")})', showlegend=True, line_color='#000000', line=dict(width=3))
     
     fig.add_trace(fig2.data[0])
-    print(str(int(round(df[['daily_rolling_average', 'fit']].to_numpy().max(),0))))
-    print((-1*len(str(int(round(df[['daily_rolling_average', 'fit']].to_numpy().max(),0))))))
     fig.update_layout(yaxis=dict(tickformat=',.0f', showgrid=True,
                                 tickmode = 'array',
                                 tickvals = [np.round(i,-1*len(str(int(i)))+1) for i in np.geomspace(
