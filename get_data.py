@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
-from scipy import stats
 from datetime import datetime, timedelta
 from uk_covid19 import Cov19API
 import plotly.express as px
@@ -17,7 +16,7 @@ pd.set_option('display.max_columns', None)
 colors = {'maincolor': '#3269a8', 'monzo': '#f88379', 'lloyds': '#024731'}
 
 
-def get_vaccinations(df):
+def get_vaccinations(df, pop, proj_days):
     
     df = df[['date', 'areaName', 'newPeopleVaccinatedFirstDoseByPublishDate', 
              'cumPeopleVaccinatedFirstDoseByPublishDate', 'cumPeopleVaccinatedFirstDoseByVaccinationDate',
@@ -62,7 +61,7 @@ def get_vaccinations(df):
     start_date = df['date'].min() + +timedelta(days=1)
     end_date = df['date'].max()
     dates = pd.date_range(start=end_date+timedelta(days=1),
-                        end=end_date+timedelta(days=150))
+                        end=end_date+timedelta(days=proj_days))
     dates = dates.to_frame()
     dates.columns = ['date']
     dates['projection_first'] = 0
@@ -99,18 +98,23 @@ def get_vaccinations(df):
                                                 df.loc[row, 'daily_rolling_average_first']
                 df.loc[row, 'projection_second'] = df.loc[row-1, 'projection_second'] + \
                                                     df.loc[row, 'daily_rolling_average_second']
+        if df.loc[row, 'projection_first'] > pop:
+            df.loc[row, 'projection_first'] = pop
+        if df.loc[row, 'projection_second'] > pop:
+            df.loc[row, 'projection_second'] = pop
+        
     for row, col in df.iterrows():
-        if col[0] < (end_date + timedelta(days=-21)):
-            df.loc[row+21, 'cum_immune'] = df.loc[row, 'cum_second_dose']
-        elif col[0] == (end_date + timedelta(days=-21)):
-            df.loc[row+21, 'cum_immune'] = df.loc[row, 'cum_second_dose']
-            df.loc[row+21, 'cum_immune_projected'] = df.loc[row, 'cum_second_dose']
-        elif col[0] > (end_date + timedelta(days=-21)) and col[0] < end_date:
-            df.loc[row+21, 'cum_immune'] = np.nan
-            df.loc[row+21, 'cum_immune_projected'] = df.loc[row, 'cum_second_dose']
+        if col[0] < (end_date + timedelta(days=-7)):
+            df.loc[row+7, 'cum_immune'] = df.loc[row, 'cum_second_dose']
+        elif col[0] == (end_date + timedelta(days=-7)):
+            df.loc[row+7, 'cum_immune'] = df.loc[row, 'cum_second_dose']
+            df.loc[row+7, 'cum_immune_projected'] = df.loc[row, 'cum_second_dose']
+        elif col[0] > (end_date + timedelta(days=-7)) and col[0] < end_date:
+            df.loc[row+7, 'cum_immune'] = np.nan
+            df.loc[row+7, 'cum_immune_projected'] = df.loc[row, 'cum_second_dose']
         else:
-            df.loc[row+21, 'cum_immune'] = np.nan
-            df.loc[row+21, 'cum_immune_projected'] = df.loc[row, 'projection_second']
+            df.loc[row+7, 'cum_immune'] = np.nan
+            df.loc[row+7, 'cum_immune_projected'] = df.loc[row, 'projection_second']
             
     return df, rolling_avg, end_date
 
@@ -334,7 +338,7 @@ def get_deaths_by_age(df):
     return deaths_by_age_df, age_groups
 
 
-def get_covid_data():
+def get_covid_data(pop, proj_days):
     all_nations = [
     "areaType=nation"
     ]
@@ -382,7 +386,7 @@ def get_covid_data():
     deaths_by_age_df, deaths_age_groups = get_deaths_by_age(full_df)
     recent_admissions_df, recent_admissions_fit_end = get_admissions(full_df)
     admissions_by_age_df, ad_age_groups  = get_admissions_by_age(full_df)
-    vacc_df, rolling_avg, end_date = get_vaccinations(full_df)
+    vacc_df, rolling_avg, end_date = get_vaccinations(full_df, pop, proj_days)
             
     return vacc_df, last_update, rolling_avg, end_date, recent_cases_df, recent_cases_fit_end, \
             recent_deaths_df, recent_deaths_fit_end, recent_admissions_df, recent_admissions_fit_end, \
@@ -415,11 +419,11 @@ def make_cum_vaccine_plot(df, end_date):
 
     fig5=px.line(df, x='date', y='cum_immune',
                 labels={'date': 'Date (reported)', 'cum_immune': 'Cumulative Immune'})
-    fig5.update_traces(name='Total Immune', showlegend=True, line_color='purple', 
+    fig5.update_traces(name='Total Fully Protected', showlegend=True, line_color='purple', 
                        hovertemplate='%{y:,.0f}', line=dict(width=3), visible = "legendonly")
 
     fig6 = px.line(df, x='date', y='cum_immune_projected')
-    fig6.update_traces(name=f'Projection of total immune', 
+    fig6.update_traces(name=f'Projection of fully protected', 
                         showlegend=True, line_color='purple', 
                        hovertemplate='%{y:,.0f}', line=dict(dash='dash', width=3), visible = "legendonly")
 
@@ -429,7 +433,7 @@ def make_cum_vaccine_plot(df, end_date):
     fig.add_trace(fig4.data[0])
     fig.add_trace(fig6.data[0])
 
-    fig.update_layout(yaxis=dict(tickformat=',0.f', showgrid=False),
+    fig.update_layout(yaxis=dict(tickformat=',0.f', showgrid=True),
                       xaxis=dict(showgrid=False),
                       hovermode='x unified',
                       showlegend= True,
@@ -447,20 +451,29 @@ def make_cum_vaccine_plot(df, end_date):
                                 xref='x', 
                                 x0=datetime.strptime("8 December, 2020", "%d %B, %Y"),
                                 x1=df['date'].max() + timedelta(days=20),
-                                line=dict(dash="dot", color=colors['lloyds'])),
+                                line=dict(dash="dot", color='#000000')),
                             dict(type= 'line', layer='below',
                                 yref='y',
                                 y0=29.6e6, y1=29.6e6,
                                 xref='x', 
                                 x0=datetime.strptime("8 December, 2020", "%d %B, %Y"),
                                 x1=df['date'].max() + timedelta(days=20),
-                                line=dict(dash="dot", color=colors['lloyds']))
+                                line=dict(dash="dot", color='#000000')),
+                            dict(type= 'line', layer='below',
+                                yref='y',
+                                y0=53e6, y1=53e6,
+                                xref='x', 
+                                x0=datetime.strptime("8 December, 2020", "%d %B, %Y"),
+                                x1=df['date'].max() + timedelta(days=20),
+                                line=dict(dash="dot", color='#000000'))
                             ])
 
     fig.add_annotation(x=0, xref='paper', yref='y', y=13.4e6, ax=25, ay=25, align="left",
-            text="Top 4 Priority Groups", xanchor="left", yanchor='bottom', xshift=5, showarrow=False, arrowhead=1, arrowsize = 2)
+            text="Top 4 Priority<br>Groups", xanchor="left", yanchor='bottom', xshift=5, showarrow=False, arrowhead=1, arrowsize = 2)
     fig.add_annotation(x=0, xref='paper', yref='y', y=29.6e6, ax=40, ay=0, yanchor='bottom', align="left",
             text="Priority Groups<br>1-9 (all over 50s)", xanchor="left", xshift=5, showarrow=False, arrowhead=1, arrowsize = 2)
+    fig.add_annotation(x=0, xref='paper', yref='y', y=53e6, ax=40, ay=0, yanchor='bottom', align="left",
+            text="All over 18s", xanchor="left", xshift=5, showarrow=False, arrowhead=1, arrowsize = 2)
 
     fig.update_xaxes(range=[datetime.strptime("8 December, 2020", "%d %B, %Y"), 
                             df['date'].max() + timedelta(days=20)], 
@@ -468,7 +481,7 @@ def make_cum_vaccine_plot(df, end_date):
     return fig
 
 
-def make_bar(df, x_title, y_title, x, y, rolling_avg):
+def make_bar(df, x_title, y_title, x, y, rolling_avg, proj_days):
     fig=px.bar(df, x=x, y=y,labels={x: x_title, 'value': y_title},
                color_discrete_sequence=[colors['maincolor'], colors['monzo']])
         
@@ -476,13 +489,13 @@ def make_bar(df, x_title, y_title, x, y, rolling_avg):
 
     fig2 = px.line(df, x=x, y='daily_rolling_average_total', line_shape='spline',
                         custom_data=["daily_total_doses"],)
-    fig2.update_traces(name=f'{rolling_avg} day rolling average (trailing)', showlegend=True, line_color='#000000',
+    fig2.update_traces(name=f'{rolling_avg} day trailing average', showlegend=True, line_color='#000000',
                         hovertemplate='%{y:,.0f}<br>Total Daily Doses: %{customdata[0]:,.0f}',
                         line=dict(width=3))
 
     fig.add_trace(fig2.data[0])
 
-    fig.update_layout(yaxis=dict(tickformat=',0.f', showgrid=False),xaxis=dict(showgrid=False),
+    fig.update_layout(yaxis=dict(tickformat=',0.f', showgrid=True),xaxis=dict(showgrid=False),
                       hovermode='x unified',showlegend= True,
                       font=dict(size=11),legend_title_text=None,
                             legend={"orientation": "h",
@@ -493,15 +506,15 @@ def make_bar(df, x_title, y_title, x, y, rolling_avg):
                              })
 
     fig.update_xaxes(range=[datetime.strptime("11 January, 2021", "%d %B, %Y") + timedelta(hours=-12), 
-                            df[x].max() + timedelta(days=-150, hours=12)], 
+                            df[x].max() + timedelta(days=-proj_days, hours=12)], 
                             scaleratio = 0.1)
     return fig
 
 
-def make_gauge(num_vax, previous_vax):
+def make_gauge(num_vax, previous_vax, pop):
     
-    pop = 66.65e6
-    group_pops = [0, 1, 3, 2.5, 2.2, 3.3, 1.4, 3.3, 3.8, 4.4, 4.7, 37.05]
+    group_pops = [0, 1, 3, 2.5, 2.2, 3.3, 1.4, 3.3, 3.8, 4.4, 4.7]
+    group_pops.append(pop-sum(group_pops))
     group_pops = [x*1e6 for x in group_pops]
     group_prop = np.cumsum(group_pops)
     groups = ["Care Homes", "80+", "Frontline Health Workers", "75+", "70+",
@@ -514,7 +527,7 @@ def make_gauge(num_vax, previous_vax):
         value = num_vax,
         number = {'valueformat':',.0f'},
         mode = "gauge+number+delta",
-        title = {'text': "UK Vaccine Rollout"},
+        title = {'text': "UK Vaccine Rollout<br>First Doses Given to Priority Groups"},
         delta = {'reference': previous_vax, 'valueformat':',.0f'},
         gauge = {'axis': {'range': [None, pop], 
                           'tickvals':group_prop,
@@ -523,6 +536,8 @@ def make_gauge(num_vax, previous_vax):
                  [{'range': [group_prop[i], group_prop[i+1]], 
                  'color': colours[i]} for i in range((len(group_pops)-1))]},
         name='Cumulative Number of First Doses'))
+
+    fig.update_layout(margin=dict(t=120))
 
     return fig
 
@@ -543,15 +558,24 @@ def make_7da_plot(df, log=False, metric='', fit_end=datetime.now()+timedelta(day
                      labels={'date': 'Date (reported)', 
                              'daily_rolling_average': f'Daily {metric}'}, 
                      log_y=log)
-    fig.update_traces(name=f'{metric} (rolling weekly average)', 
+    fig.update_traces(name=f'{metric} (centred weekly average)', 
                       showlegend=True, marker_color=colors['maincolor'])
     
     fig2 = px.line(df, x='date', y='fit')
     fig2.update_traces(name=f'Fit (on data up to {fit_end.strftime("%d %B")})', showlegend=True, line_color='#000000', line=dict(width=3))
     
     fig.add_trace(fig2.data[0])
-
-    fig.update_layout(yaxis=dict(tickformat=',.0f', showgrid=False),
+    print(str(int(round(df[['daily_rolling_average', 'fit']].to_numpy().max(),0))))
+    print((-1*len(str(int(round(df[['daily_rolling_average', 'fit']].to_numpy().max(),0))))))
+    fig.update_layout(yaxis=dict(tickformat=',.0f', showgrid=True,
+                                tickmode = 'array',
+                                tickvals = [np.round(i,-1*len(str(int(i)))+1) for i in np.geomspace(
+                                                        np.round(df[['daily_rolling_average', 'fit']].to_numpy().min(), 
+                                                                (-1*len(str(int(round(df[['daily_rolling_average', 'fit']].to_numpy().min(),0))))+1)),
+                                                        np.round(df[['daily_rolling_average', 'fit']].to_numpy().max(), 
+                                                                (-1*len(str(int(round(df[['daily_rolling_average', 'fit']].to_numpy().max(),0))))+1)),
+                                                        num=5)
+                                            ]),
                       xaxis=dict(showgrid=False),
                       font=dict(size=12, color="#000000"), 
                       showlegend=True,
@@ -577,7 +601,7 @@ def make_indexed_plot(df, groups, log=True, metric=''):
     fig.update_traces(line=dict(width=3))
 
     fig.update_layout(yaxis=dict(ticksuffix='%', tickformat=',.0f', tickmode = 'array',
-                    tickvals = [1, 10, 20, 50, 70, 100], showgrid=False),
+                    tickvals = [1, 10, 20, 50, 70, 100], showgrid=True),
                       xaxis=dict(showgrid=False),
                       font=dict(size=12, color="#000000"), 
                       showlegend=True,

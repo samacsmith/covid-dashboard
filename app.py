@@ -6,17 +6,21 @@ from dash.dependencies import Input, Output
 from get_data import get_covid_data, make_cum_vaccine_plot, make_bar, make_gauge, make_7da_plot, make_indexed_plot
 
 def update_data():
+    pop = 67.61e6
+    proj_days = 215
+
     vacc_df, last_update, rolling_avg, end_date, recent_cases_df, recent_cases_fit_end, \
             recent_deaths_df, recent_deaths_fit_end, recent_admissions_df, recent_admissions_fit_end, \
             admissions_by_age_df, ad_age_groups, cases_by_age_df, cases_age_groups, \
-            deaths_by_age_df, deaths_age_groups = get_covid_data()
+            deaths_by_age_df, deaths_age_groups = get_covid_data(pop, proj_days)
 
     vacc_df = vacc_df.rename(columns={'daily_first_dose': 'First Dose', 'daily_second_dose': 'Second Dose'})
 
     cum_first_dose = make_cum_vaccine_plot(vacc_df, end_date)
-    daily_dose = make_bar(vacc_df.loc[(vacc_df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 'Daily Number of Doses', 'date', ["First Dose", "Second Dose"], rolling_avg)
+    daily_dose = make_bar(vacc_df.loc[(vacc_df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 
+                'Daily Number of Doses', 'date', ["First Dose", "Second Dose"], rolling_avg, proj_days)
     gauge_chart = make_gauge(vacc_df.set_index('date').loc[end_date, 'cum_first_dose'],
-                        vacc_df.set_index('date').loc[end_date+timedelta(days=-1), 'cum_first_dose'])
+                        vacc_df.set_index('date').loc[end_date+timedelta(days=-1), 'cum_first_dose'], pop)
     fitted_cases = make_7da_plot(recent_cases_df, log=True, metric='Cases', fit_end=recent_cases_fit_end)
     fitted_deaths = make_7da_plot(recent_deaths_df, log=True, metric='Deaths', fit_end=recent_deaths_fit_end)
     fitted_admissions = make_7da_plot(recent_admissions_df, log=True, metric='Admissions', fit_end=recent_admissions_fit_end)
@@ -153,11 +157,7 @@ if __name__ == '__main__':
 
 '''
 To Do:
-1) User defined vaccination efficacy (for number immune and cases)
-2) Headline figures/dates
-3) quadratic fit to cases, admissions, deaths -- when appropriate
-4) % comparison for things (e.g. % >80 hospital admissions)
-5) Update number in each priority group and stop first doses after all done
-6) explainers for each graph
-7) fix cumulative projections dropping
+1) Headline figures/dates
+2) % comparison for things (e.g. % >80 hospital admissions)
+3) explainers for each graph
 '''
