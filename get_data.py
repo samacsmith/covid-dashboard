@@ -567,13 +567,9 @@ def make_7da_plot(df, log=False, metric='', fit_end=datetime.now()+timedelta(day
     fig.add_trace(fig2.data[0])
     fig.update_layout(yaxis=dict(tickformat=',.0f', showgrid=True,
                                 tickmode = 'array',
-                                tickvals = [np.round(i,-1*len(str(int(i)))+1) for i in np.geomspace(
-                                                        np.round(df[['daily_rolling_average', 'fit']].to_numpy().min(), 
-                                                                (-1*len(str(int(round(df[['daily_rolling_average', 'fit']].to_numpy().min(),0))))+1)),
-                                                        np.round(df[['daily_rolling_average', 'fit']].to_numpy().max(), 
-                                                                (-1*len(str(int(round(df[['daily_rolling_average', 'fit']].to_numpy().max(),0))))+1)),
-                                                        num=5)
-                                            ]),
+                                tickvals = [np.round(np.round(df[['daily_rolling_average', 'fit']].to_numpy().max(), 
+                                            (-1*len(str(int(round(df[['daily_rolling_average', 'fit']].to_numpy().max(),0))))+1))/i,
+                                            -1*len(str(int(i)))+1) for i in [1,2,4,8,16,32,64]]),
                       xaxis=dict(showgrid=False),
                       font=dict(size=12, color="#000000"), 
                       showlegend=True,
@@ -599,7 +595,7 @@ def make_indexed_plot(df, groups, log=True, metric=''):
     fig.update_traces(line=dict(width=3))
 
     fig.update_layout(yaxis=dict(ticksuffix='%', tickformat=',.0f', tickmode = 'array',
-                    tickvals = [1, 10, 20, 50, 70, 100], showgrid=True),
+                    tickvals = [100, 50, 25, 10, 5, 2.5, 1], showgrid=True),
                       xaxis=dict(showgrid=False),
                       font=dict(size=12, color="#000000"), 
                       showlegend=True,
