@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
 from datetime import datetime, timedelta
+from dateutil import tz
 from uk_covid19 import Cov19API
 import plotly.express as px
 import plotly.io as pio
@@ -369,9 +370,14 @@ def get_covid_data(pop, proj_days):
         latest_by="newPeopleVaccinatedFirstDoseByPublishDate"
     )
 
-    last_update = api.get_json()['lastUpdate']
-    last_update = datetime.fromisoformat(last_update[:-1])
-    last_update = last_update.strftime("%a %d %b %H:%M")
+    last_update_utc = api.get_json()['lastUpdate']
+    last_update_utc = datetime.fromisoformat(last_update_utc[:-1])
+    from_zone = tz.tzutc()
+    to_zone = tz.tzlocal()
+    last_update_utc = last_update_utc.replace(tzinfo=from_zone)
+    # Convert time zone
+    last_update_local = last_update_utc.astimezone(to_zone)
+    last_update = last_update_local.strftime("%a %d %b %H:%M")
 
     api = Cov19API(
         filters=all_nations,
@@ -511,33 +517,55 @@ def make_bar(df, x_title, y_title, x, y, rolling_avg, proj_days):
     return fig
 
 
-def make_gauge(num_vax, previous_vax, pop):
+def make_gauge(num_vax_first, previous_vax_first, num_vax_second, previous_vax_second, pop):
     
-    group_pops = [0, 1, 3, 2.5, 2.2, 3.3, 1.4, 3.3, 3.8, 4.4, 4.7]
+    group_pops = [0, 1.1, 5.5, 2.3, 4.4, 2.9, 8.8, 1.8, 2.4, 2.8, 6.3, 6.7, 7.7]
     group_pops.append(pop-sum(group_pops))
     group_pops = [x*1e6 for x in group_pops]
     group_prop = np.cumsum(group_pops)
-    groups = ["Care Homes", "80+", "Frontline Health Workers", "75+", "70+",
-                "Clinically Vulnerable", "65+","60+", "55+", "50+", "Everyone Else", "Entire Population"]
-    colours = ["012a4a","013a63","01497c","014f86","2a6f97","2c7da0","468faf","61a5c2","89c2d9","a9d6e5","c7e2eb"]
+    groups = ["Care Homes", "80+ & Health Workers", "75-79", "70-74 &<br>Clinically Vulnerable",
+                "65-69", "Underlying Health<br>Conditions & Carers", "60-64", "55-59", "50-54", 
+                "40-49", "30-39", "18-29", "Under 18"]
+    colours = ["012a4a","013a63","01497c","014f86","2a6f97","2c7da0","468faf","61a5c2",
+                "89c2d9","a9d6e5","c7e2eb","d3e9f0","dfeaed"]
     colours = ['#'+i for i in colours]
     
-    fig = go.Figure(go.Indicator(
-        domain = {'x': [0, 1], 'y': [0, 1]},
-        value = num_vax,
+    trace1 = go.Indicator(
+        domain = {'x': [0.05, 0.45], 'y': [0.0, 1]},
+        value = num_vax_first,
         number = {'valueformat':',.0f'},
         mode = "gauge+number+delta",
-        title = {'text': "UK Vaccine Rollout<br>First Doses Given to Priority Groups"},
-        delta = {'reference': previous_vax, 'valueformat':',.0f'},
+        title = {'text': "First Dose Rollout"},
+        delta = {'reference': previous_vax_first, 'valueformat':',.0f'},
         gauge = {'axis': {'range': [None, pop], 
                           'tickvals':group_prop,
-                         'ticktext':groups},
+                         'ticktext':groups,
+                         'tickangle':10},
+                'bar': {'color': '#074c00'},
                  'steps': 
                  [{'range': [group_prop[i], group_prop[i+1]], 
                  'color': colours[i]} for i in range((len(group_pops)-1))]},
-        name='Cumulative Number of First Doses'))
+        name='Cumulative Number of First Doses')
 
-    fig.update_layout(margin=dict(t=120))
+    trace2 = go.Indicator(
+        domain = {'x': [0.6, 1.0], 'y': [0., 1.00]},
+        value = num_vax_second,
+        number = {'valueformat':',.0f'},
+        mode = "gauge+number+delta",
+        title = {'text': "Second Dose Rollout"},
+        delta = {'reference': previous_vax_second, 'valueformat':',.0f'},
+        gauge = {'axis': {'range': [None, pop], 
+                          'tickvals':group_prop,
+                         'ticktext':groups,
+                         'tickangle':10},
+                'bar': {'color': colors['monzo']},
+                 'steps': 
+                 [{'range': [group_prop[i], group_prop[i+1]], 
+                 'color': colours[i]} for i in range((len(group_pops)-1))]},
+        name='Cumulative Number of First Doses')
+
+    fig = go.Figure(data = [trace1, trace2])
+    # fig.update_layout(margin=dict(l=120))
 
     return fig
 

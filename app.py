@@ -2,6 +2,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from datetime import datetime, timedelta
+from dateutil import tz
 from dash.dependencies import Input, Output
 from get_data import get_covid_data, make_cum_vaccine_plot, make_bar, make_gauge, make_7da_plot, make_indexed_plot
 
@@ -20,7 +21,9 @@ def update_data():
     daily_dose = make_bar(vacc_df.loc[(vacc_df['date'] > datetime.strptime("10 January, 2021", "%d %B, %Y"))], 'Date (reported)', 
                 'Daily Number of Doses', 'date', ["First Dose", "Second Dose"], rolling_avg, proj_days)
     gauge_chart = make_gauge(vacc_df.set_index('date').loc[end_date, 'cum_first_dose'],
-                        vacc_df.set_index('date').loc[end_date+timedelta(days=-1), 'cum_first_dose'], pop)
+                        vacc_df.set_index('date').loc[end_date+timedelta(days=-1), 'cum_first_dose'], 
+                        vacc_df.set_index('date').loc[end_date, 'cum_second_dose'],
+                        vacc_df.set_index('date').loc[end_date+timedelta(days=-1), 'cum_second_dose'], pop)
     fitted_cases = make_7da_plot(recent_cases_df, log=True, metric='Cases', fit_end=recent_cases_fit_end)
     fitted_deaths = make_7da_plot(recent_deaths_df, log=True, metric='Deaths', fit_end=recent_deaths_fit_end)
     fitted_admissions = make_7da_plot(recent_admissions_df, log=True, metric='Admissions', fit_end=recent_admissions_fit_end)
@@ -59,7 +62,7 @@ def serve_layout():
 
         html.Div(id='updates', className='three columns', children=[
             html.H5(children=f'Data last updated: {last_update}', style={'text-align': 'right', 'font-family': "Roboto Mono", 'font-size': '0.8rem'}),
-            html.H5(children=f'Page last updated: {datetime.now().strftime("%a %d %b %H:%M")}', style={'text-align': 'right', 'font-family': "Roboto Mono", 'font-size': '0.8rem'})            
+            html.H5(children=f'Page last updated: {datetime.utcnow().replace(tzinfo=tz.tzutc()).astimezone(tz.tzlocal()).strftime("%a %d %b %H:%M")}', style={'text-align': 'right', 'font-family': "Roboto Mono", 'font-size': '0.8rem'})            
         ])    
     ]),
 
@@ -158,6 +161,5 @@ if __name__ == '__main__':
 '''
 To Do:
 1) Headline figures/dates
-2) % comparison for things (e.g. % >80 hospital admissions)
-3) explainers for each graph
+2) explainers for each graph
 '''
