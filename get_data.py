@@ -372,11 +372,9 @@ def get_covid_data(pop, proj_days):
 
     last_update_utc = api.get_json()['lastUpdate']
     last_update_utc = datetime.fromisoformat(last_update_utc[:-1])
-    from_zone = tz.tzutc()
-    to_zone = tz.tzlocal()
-    last_update_utc = last_update_utc.replace(tzinfo=from_zone)
+    last_update_utc = last_update_utc.replace(tzinfo=tz.tzutc())
     # Convert time zone
-    last_update_local = last_update_utc.astimezone(to_zone)
+    last_update_local = last_update_utc.astimezone(tz.gettz("Europe/London"))
     last_update = last_update_local.strftime("%a %d %b %H:%M")
 
     api = Cov19API(
