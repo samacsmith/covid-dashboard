@@ -122,12 +122,13 @@ def get_vaccinations(df, pop, proj_days):
 
 def get_cases(df):
     
-    df = df[['date', 'areaName', 'newCasesByPublishDate']]
+    df = df[['date', 'areaName', 'newCasesBySpecimenDate']]
     df.columns = ['date', 'area', 'daily_cases']
     df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
     df = df.groupby('date').sum().reset_index()
+    df = df.iloc[:-5]
 
-    df['daily_rolling_average'] = df['daily_cases'].rolling(window=7, min_periods=7, center=True).mean()
+    df['daily_rolling_average'] = df['daily_cases'].rolling(window=7).mean()
     df = df.dropna()
     df['days_since_start'] = df['date'].apply(lambda x: (x - datetime(2021,1,9)).days)
 
@@ -144,12 +145,13 @@ def get_cases(df):
 
 def get_deaths(df):
     
-    df = df[['date', 'areaName', 'newDeaths28DaysByPublishDate']]
+    df = df[['date', 'areaName', 'newDeaths28DaysByDeathDate']]
     df.columns = ['date', 'area', 'daily_deaths']
     df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
     df = df.groupby('date').sum().reset_index()
+    df = df.iloc[:-5]
 
-    df['daily_rolling_average'] = df['daily_deaths'].rolling(window=7, min_periods=7, center=True).mean()
+    df['daily_rolling_average'] = df['daily_deaths'].rolling(window=7).mean()
     df = df.dropna()
     df['days_since_start'] = df['date'].apply(lambda x: (x - datetime(2021,1,30)).days)
 
@@ -169,14 +171,14 @@ def get_admissions(df):
     df.columns = ['date', 'area', 'daily_admissions']
     df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
     df = df.groupby('date').sum().reset_index()
+    df = df.iloc[:-7]
 
-    df['daily_rolling_average'] = df['daily_admissions'].rolling(window=7, min_periods=7, center=True).mean()
+    df['daily_rolling_average'] = df['daily_admissions'].rolling(window=7).mean()
     df = df.dropna()
     df['days_since_start'] = df['date'].apply(lambda x: (x - datetime(2021,1,22)).days)
 
     recent_df = df.copy()
     recent_df = recent_df[recent_df['date']>datetime.strptime("22 January, 2021", "%d %B, %Y")]
-    recent_df = recent_df.iloc[:-7]
 
     fit_end = datetime.strptime("22 February, 2021", "%d %B, %Y")
     pars, cov = curve_fit(f=exponential, xdata=recent_df[recent_df['date']<fit_end]['days_since_start'], 
@@ -221,8 +223,7 @@ def get_admissions_by_age(df):
                 admissions_by_age_df.iloc[row, i+len(age_groups.keys())] = admissions_by_age_df.iloc[row, i] - admissions_by_age_df.iloc[row-1, i]
 
     for group in age_groups.keys():
-        admissions_by_age_df[f'{group}_daily_rolling_average'] = admissions_by_age_df[f'{group}_daily'].rolling(window=7, 
-                                                                         min_periods=7, center=True).mean()
+        admissions_by_age_df[f'{group}_daily_rolling_average'] = admissions_by_age_df[f'{group}_daily'].rolling(window=7).mean()
         max_val = admissions_by_age_df[f'{group}_daily_rolling_average'].max()
         admissions_by_age_df[f'{group}_indexed'] = admissions_by_age_df[f'{group}_daily_rolling_average'].apply(lambda x: 100*x/max_val)
 
@@ -266,7 +267,7 @@ def get_cases_by_age(df):
     cases_by_age_df = cases_by_age_male_df.set_index('date') + cases_by_age_male_df.set_index('date')
     cases_by_age_df = cases_by_age_df.reset_index()
     cases_by_age_df.loc[:, 'date'] = pd.to_datetime(cases_by_age_df['date'], format="%Y-%m-%d")
-    cases_by_age_df = cases_by_age_df.iloc[:-4]
+    cases_by_age_df = cases_by_age_df.iloc[:-5]
 
     for group in age_groups.keys():
         cases_by_age_df[group] = cases_by_age_df[age_groups[group]].sum(axis=1)
@@ -285,8 +286,7 @@ def get_cases_by_age(df):
                 cases_by_age_df.iloc[row, i+len(age_groups.keys())] = cases_by_age_df.iloc[row, i] - cases_by_age_df.iloc[row-1, i]
 
     for group in age_groups.keys():
-        cases_by_age_df[f'{group}_daily_rolling_average'] = cases_by_age_df[f'{group}_daily'].rolling(window=7, 
-                                                                         min_periods=7, center=True).mean()
+        cases_by_age_df[f'{group}_daily_rolling_average'] = cases_by_age_df[f'{group}_daily'].rolling(window=7).mean()
         max_val = cases_by_age_df[f'{group}_daily_rolling_average'].max()
         cases_by_age_df[f'{group}_indexed'] = cases_by_age_df[f'{group}_daily_rolling_average'].apply(lambda x: 100*x/max_val)
 
@@ -306,7 +306,6 @@ def get_deaths_by_age(df):
     }
     
     df = df[['date', 'areaName', 'newDeaths28DaysByDeathDateAgeDemographics']]
-    df = df[df['areaName'] == 'England']
     deaths_by_age = {}
     for row, col in df.iterrows():
         if col[2]:
@@ -317,6 +316,7 @@ def get_deaths_by_age(df):
     deaths_by_age_df = pd.DataFrame(deaths_by_age)
     deaths_by_age_df = deaths_by_age_df.T.reset_index().rename(columns={'index':'date'}).sort_values('date').reset_index(drop=True)
     deaths_by_age_df = deaths_by_age_df.groupby('date').sum().reset_index()
+    deaths_by_age_df = deaths_by_age_df.iloc[:-5]
 
     deaths_by_age_df.loc[:, 'date'] = pd.to_datetime(deaths_by_age_df['date'], format="%Y-%m-%d")
 
@@ -327,8 +327,7 @@ def get_deaths_by_age(df):
     deaths_by_age_df = deaths_by_age_df[cols]
 
     for group in age_groups.keys():
-        deaths_by_age_df[f'{group}_daily_rolling_average'] = deaths_by_age_df[f'{group}'].rolling(window=7, 
-                                                                         min_periods=7, center=True).mean()
+        deaths_by_age_df[f'{group}_daily_rolling_average'] = deaths_by_age_df[f'{group}'].rolling(window=7).mean()
         max_val = deaths_by_age_df[f'{group}_daily_rolling_average'].max()
         deaths_by_age_df[f'{group}_indexed'] = deaths_by_age_df[f'{group}_daily_rolling_average'].apply(lambda x: 100*x/max_val)
 
@@ -355,8 +354,8 @@ def get_covid_data(pop, proj_days):
         "cumPeopleVaccinatedFirstDoseByVaccinationDate":"cumPeopleVaccinatedFirstDoseByVaccinationDate",
         "weeklyPeopleVaccinatedSecondDoseByVaccinationDate":"weeklyPeopleVaccinatedSecondDoseByVaccinationDate",
         "cumPeopleVaccinatedSecondDoseByVaccinationDate":"cumPeopleVaccinatedSecondDoseByVaccinationDate",
-        "newCasesByPublishDate": "newCasesByPublishDate",
-        "newDeaths28DaysByPublishDate": "newDeaths28DaysByPublishDate",
+        "newCasesBySpecimenDate": "newCasesBySpecimenDate",
+        "newDeaths28DaysByDeathDate": "newDeaths28DaysByDeathDate",
         "newAdmissions": "newAdmissions",
         "cumAdmissionsByAge": "cumAdmissionsByAge",
         "maleCases": "maleCases",
@@ -581,10 +580,10 @@ def make_cumulative_plot(df, x, y, x_title, y_title):
 
 def make_7da_plot(df, log=False, metric='', fit_end=datetime.now()+timedelta(days=-1)):
     fig = px.scatter(df, x='date', y='daily_rolling_average', 
-                     labels={'date': 'Date (reported)', 
+                     labels={'date': 'Date', 
                              'daily_rolling_average': f'Daily {metric}'}, 
                      log_y=log)
-    fig.update_traces(name=f'{metric} (centred weekly average)', 
+    fig.update_traces(name=f'{metric} (7 day trailing average)', 
                       showlegend=True, marker_color=colors['maincolor'])
     
     fig2 = px.line(df, x='date', y='fit')
