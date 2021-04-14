@@ -29,7 +29,6 @@ def get_vaccinations(df, pop, proj_days):
     df = df[df['date']>=datetime.strptime("8 December, 2020", "%d %B, %Y")]
 
     df = df.groupby('date').sum().reset_index()
-    df = df[:-1]
     for row, col in df.iterrows():
         if row != 0:
             if col[2] == 0:
