@@ -21,8 +21,8 @@
 }
 
 @font-face {
-	font-family: 'Roboto';
-	src: url('fonts/Roboto/Roboto-Regular.ttf');
+	font-family: 'Inter';
+	src: url('fonts/Inter-3/Inter\ Desktop/Inter-Regular.otf');
 }
 
 @font-face {
@@ -34,7 +34,7 @@ body {
   font-size: 1em;
   line-height: 1.6;
   font-weight: 400;
-  font-family: "Roboto";
+  font-family: "Inter";
   color: #333333;
   background-color: #f9f9f9}
 
