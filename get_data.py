@@ -102,19 +102,10 @@ def get_vaccinations(df, pop, proj_days):
             df.loc[row, 'projection_first'] = pop
         if df.loc[row, 'projection_second'] > pop:
             df.loc[row, 'projection_second'] = pop
-        
-    for row, col in df.iterrows():
-        if col[0] < (end_date + timedelta(days=-7)):
-            df.loc[row+7, 'cum_immune'] = df.loc[row, 'cum_second_dose']
-        elif col[0] == (end_date + timedelta(days=-7)):
-            df.loc[row+7, 'cum_immune'] = df.loc[row, 'cum_second_dose']
-            df.loc[row+7, 'cum_immune_projected'] = df.loc[row, 'cum_second_dose']
-        elif col[0] > (end_date + timedelta(days=-7)) and col[0] < end_date:
-            df.loc[row+7, 'cum_immune'] = np.nan
-            df.loc[row+7, 'cum_immune_projected'] = df.loc[row, 'cum_second_dose']
-        else:
-            df.loc[row+7, 'cum_immune'] = np.nan
-            df.loc[row+7, 'cum_immune_projected'] = df.loc[row, 'projection_second']
+
+    # Remove the projection for the final day we have real data
+    df.set_index('date').loc[end_date, 'projection_first'] = np.nan
+    df.set_index('date').loc[end_date, 'projection_second'] = np.nan
             
     return df, rolling_avg, end_date
 
@@ -419,21 +410,9 @@ def make_cum_vaccine_plot(df, end_date):
                         showlegend=True, line_color=colors['monzo'], 
                        hovertemplate='%{y:,.0f}', line=dict(dash='dash', width=3))
 
-    fig5=px.line(df, x='date', y='cum_immune',
-                labels={'date': 'Date (reported)', 'cum_immune': 'Cumulative Immune'})
-    fig5.update_traces(name='Total Fully Protected', showlegend=True, line_color='purple', 
-                       hovertemplate='%{y:,.0f}', line=dict(width=3), visible = "legendonly")
-
-    fig6 = px.line(df, x='date', y='cum_immune_projected')
-    fig6.update_traces(name=f'Projection of fully protected', 
-                        showlegend=True, line_color='purple', 
-                       hovertemplate='%{y:,.0f}', line=dict(dash='dash', width=3), visible = "legendonly")
-
     fig.add_trace(fig3.data[0])
-    fig.add_trace(fig5.data[0])
     fig.add_trace(fig2.data[0])
     fig.add_trace(fig4.data[0])
-    fig.add_trace(fig6.data[0])
 
     fig.update_layout(yaxis=dict(tickformat=',0.f', showgrid=True),
                       xaxis=dict(showgrid=False),
