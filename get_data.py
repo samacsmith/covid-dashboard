@@ -20,15 +20,16 @@ colors = {'maincolor': '#3269a8', 'monzo': '#f88379', 'lloyds': '#024731'}
 def get_vaccinations(df, pop, proj_days):
     
     df = df[['date', 'areaName', 'newPeopleVaccinatedFirstDoseByPublishDate', 
-             'cumPeopleVaccinatedFirstDoseByPublishDate', 'cumPeopleVaccinatedFirstDoseByVaccinationDate',
-            'newPeopleVaccinatedSecondDoseByPublishDate', 'cumPeopleVaccinatedSecondDoseByPublishDate', 
-             'cumPeopleVaccinatedSecondDoseByVaccinationDate']]
-    df.columns = ['date', 'area', 'daily_first_dose', 'cum_first_dose', 'cum_first_dose_weekly',
-                 'daily_second_dose', 'cum_second_dose', 'cum_second_dose_weekly']
+             'cumPeopleVaccinatedFirstDoseByPublishDate',
+             'newPeopleVaccinatedSecondDoseByPublishDate',
+             'cumPeopleVaccinatedSecondDoseByPublishDate']]
+    df.columns = ['date', 'area', 'daily_first_dose', 'cum_first_dose',
+                 'daily_second_dose', 'cum_second_dose']
     df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
     df = df[df['date']>=datetime.strptime("8 December, 2020", "%d %B, %Y")]
 
     df = df.groupby('date').sum().reset_index()
+
     for row, col in df.iterrows():
         if row != 0:
             if col[2] == 0:
@@ -102,7 +103,7 @@ def get_vaccinations(df, pop, proj_days):
             df.loc[row, 'projection_first'] = pop
         if df.loc[row, 'projection_second'] > pop:
             df.loc[row, 'projection_second'] = pop
-
+        
     # Remove the projection for the final day we have real data
     df.set_index('date').loc[end_date, 'projection_first'] = np.nan
     df.set_index('date').loc[end_date, 'projection_second'] = np.nan
@@ -227,9 +228,10 @@ def get_admissions_by_age(df):
 def get_cases_by_age(df):
     
     age_groups = {
-        'under_50s': ['0_to_4', '5_to_9', '10_to_14', '15_to_19', '20_to_24',
-                       '25_to_29', '30_to_34', '35_to_39', '40_to_44', '45_to_49'],
-        'over_50s': ['50_to_54', '55_to_59', '60_to_64', '65_to_69', '70_to_74', '75_to_79', '80_to_84', '85_to_89', '90+']
+        'under_65s': ['0_to_4', '5_to_9', '10_to_14', '15_to_19', '20_to_24',
+                       '25_to_29', '30_to_34', '35_to_39', '40_to_44', '45_to_49', '50_to_54',
+                       '55_to_59', '60_to_64'],
+        'over_65s': ['65_to_69', '70_to_74', '75_to_79', '80_to_84', '85_to_89', '90+']
     }
     
     df = df[['date', 'areaName', 'maleCases', 'femaleCases']]
@@ -289,9 +291,9 @@ def get_cases_by_age(df):
 def get_deaths_by_age(df):
     
     age_groups = {
-        'under_50s': ['00_04', '05_09', '10_14', '15_19', '20_24', '25_29', '30_34', '35_39',
-                       '40_44', '45_49'],
-        'over_50s': ['50_54', '55_59',  '60_64', '65_69', '70_74', '75_79', '80_84', '85_89', '90+']
+        'under_65s': ['00_04', '10_14', '15_19', '20_24', '25_29', '30_34', '35_39',
+                       '40_44', '45_49', '50_54', '55_59', '05_09', '60_64'],
+        'over_65s': ['65_69', '70_74', '75_79', '80_84', '85_89', '90+']
     }
     
     df = df[['date', 'areaName', 'newDeaths28DaysByDeathDateAgeDemographics']]
@@ -339,10 +341,6 @@ def get_covid_data(pop, proj_days):
         "newPeopleVaccinatedSecondDoseByPublishDate":"newPeopleVaccinatedSecondDoseByPublishDate",
         "cumPeopleVaccinatedFirstDoseByPublishDate":"cumPeopleVaccinatedFirstDoseByPublishDate",
         "cumPeopleVaccinatedSecondDoseByPublishDate":"cumPeopleVaccinatedSecondDoseByPublishDate",
-        "weeklyPeopleVaccinatedFirstDoseByVaccinationDate":"weeklyPeopleVaccinatedFirstDoseByVaccinationDate",
-        "cumPeopleVaccinatedFirstDoseByVaccinationDate":"cumPeopleVaccinatedFirstDoseByVaccinationDate",
-        "weeklyPeopleVaccinatedSecondDoseByVaccinationDate":"weeklyPeopleVaccinatedSecondDoseByVaccinationDate",
-        "cumPeopleVaccinatedSecondDoseByVaccinationDate":"cumPeopleVaccinatedSecondDoseByVaccinationDate",
         "newCasesBySpecimenDate": "newCasesBySpecimenDate",
         "newDeaths28DaysByDeathDate": "newDeaths28DaysByDeathDate",
         "newAdmissions": "newAdmissions",
@@ -354,8 +352,7 @@ def get_covid_data(pop, proj_days):
 
     api = Cov19API(
         filters=all_nations,
-        structure=get_data,
-        latest_by="newPeopleVaccinatedFirstDoseByPublishDate"
+        structure=get_data
     )
 
     last_update_utc = api.get_json()['lastUpdate']
@@ -364,11 +361,6 @@ def get_covid_data(pop, proj_days):
     # Convert time zone
     last_update_local = last_update_utc.astimezone(tz.gettz("Europe/London"))
     last_update = last_update_local.strftime("%a %d %b %H:%M")
-
-    api = Cov19API(
-        filters=all_nations,
-        structure=get_data
-    )
 
     full_df = api.get_dataframe()
     
