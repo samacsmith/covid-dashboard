@@ -367,15 +367,15 @@ def get_covid_data(pop, proj_days):
     recent_cases_df, recent_cases_fit_end = get_cases(full_df)
     cases_by_age_df, cases_age_groups = get_cases_by_age(full_df)
     recent_deaths_df, recent_deaths_fit_end = get_deaths(full_df)
-    deaths_by_age_df, deaths_age_groups = get_deaths_by_age(full_df)
+    # deaths_by_age_df, deaths_age_groups = get_deaths_by_age(full_df)
     recent_admissions_df, recent_admissions_fit_end = get_admissions(full_df)
     admissions_by_age_df, ad_age_groups  = get_admissions_by_age(full_df)
     vacc_df, rolling_avg, end_date = get_vaccinations(full_df, pop, proj_days)
             
     return vacc_df, last_update, rolling_avg, end_date, recent_cases_df, recent_cases_fit_end, \
             recent_deaths_df, recent_deaths_fit_end, recent_admissions_df, recent_admissions_fit_end, \
-            admissions_by_age_df, ad_age_groups, cases_by_age_df, cases_age_groups, \
-            deaths_by_age_df, deaths_age_groups
+            admissions_by_age_df, ad_age_groups, cases_by_age_df, cases_age_groups, #\
+            # deaths_by_age_df, deaths_age_groups
 
 
 def make_cum_vaccine_plot(df, end_date):
