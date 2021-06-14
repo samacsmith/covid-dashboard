@@ -484,24 +484,28 @@ def make_bar(df, x_title, y_title, x, y, rolling_avg, proj_days):
 
 
 def make_gauge(num_vax_first, previous_vax_first, num_vax_second, previous_vax_second, pop):
+
+    vax_take_up = 0.9
     
     group_pops = [0, 1.1, 5.5, 2.3, 4.4, 2.9, 8.8, 1.8, 2.4, 2.8, 6.3, 6.7, 7.7]
-    group_pops.append(pop-sum(group_pops))
     group_pops = [x*1e6 for x in group_pops]
+    group_pops.append(pop-sum(group_pops))
+    group_pops = [x*vax_take_up for x in group_pops]
+    group_pops.append(pop-sum(group_pops))
     group_prop = np.cumsum(group_pops)
     groups = ["Care Homes", "80+ & Health Workers", "75-79", "70-74 &<br>Clinically Vulnerable",
                 "65-69", "Underlying Health<br>Conditions & Carers", "60-64", "55-59", "50-54", 
-                "40-49", "30-39", "18-29", "Under 18"]
+                "40-49", "30-39", "18-29", "Under 18", "Chosen not<br>to have<br>vaccine", ""]
     colours = ["012a4a","013a63","01497c","014f86","2a6f97","2c7da0","468faf","61a5c2",
-                "89c2d9","a9d6e5","c7e2eb","d3e9f0","dfeaed"]
+                "89c2d9","a9d6e5","c7e2eb","d3e9f0","dfeaed", "bf3f3f"]
     colours = ['#'+i for i in colours]
     
     trace1 = go.Indicator(
-        domain = {'x': [0.05, 0.45], 'y': [0.0, 1]},
+        domain = {'x': [0.05, 0.42], 'y': [0.0, 1]},
         value = num_vax_first,
         number = {'valueformat':',.0f'},
         mode = "gauge+number+delta",
-        title = {'text': "First Dose Rollout"},
+        title = {'text': f"First Dose Rollout<br>({vax_take_up*100:.0f}% take up assumption)"},
         delta = {'reference': previous_vax_first, 'valueformat':',.0f'},
         gauge = {'axis': {'range': [None, pop], 
                           'tickvals':group_prop,
