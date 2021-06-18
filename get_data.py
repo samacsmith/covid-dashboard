@@ -548,13 +548,30 @@ def make_gauge(num_vax_first, previous_vax_first, num_vax_second, previous_vax_s
     colours = ["012a4a","013a63","01497c","014f86","2a6f97","2c7da0","468faf","61a5c2",
                 "89c2d9","a9d6e5","c7e2eb","d3e9f0","dfeaed", "bf3f3f"]
     colours = ['#'+i for i in colours]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Indicator(
+        domain = {'x': [0.05, 0.42], 'y': [0.8, 1]},
+        mode = "number+delta",
+        value = 100*num_vax_first/pop,
+        number = {'suffix': "%"},
+        delta = {'reference': 100*previous_vax_first/pop},
+        title = {'text': f"First Dose Rollout<br>({vax_take_up*100:.0f}% take up assumption)"}))
+
+    fig.add_trace(go.Indicator(
+        domain = {'x': [0.6, 1.0], 'y': [0.8, 1]},
+        mode = "number+delta",
+        value = 100*num_vax_second/pop,
+        number = {'suffix': "%"},
+        delta = {'reference': 100*previous_vax_second/pop},
+        title = {'text': "Second Dose Rollout<br>(100% return rate)"}))
     
-    trace1 = go.Indicator(
-        domain = {'x': [0.05, 0.42], 'y': [0.0, 1]},
+    fig.add_trace(go.Indicator(
+        domain = {'x': [0.05, 0.42], 'y': [0, 0.7]},
         value = num_vax_first,
         number = {'valueformat':',.0f'},
         mode = "gauge+number+delta",
-        title = {'text': f"First Dose Rollout<br>({vax_take_up*100:.0f}% take up assumption)"},
         delta = {'reference': previous_vax_first, 'valueformat':',.0f'},
         gauge = {'axis': {'range': [None, pop], 
                           'tickvals':group_prop,
@@ -563,15 +580,13 @@ def make_gauge(num_vax_first, previous_vax_first, num_vax_second, previous_vax_s
                 'bar': {'color': '#074c00'},
                  'steps': 
                  [{'range': [group_prop[i], group_prop[i+1]], 
-                 'color': colours[i]} for i in range((len(group_pops)-1))]},
-        name='Cumulative Number of First Doses')
+                 'color': colours[i]} for i in range((len(group_pops)-1))]}))
 
-    trace2 = go.Indicator(
-        domain = {'x': [0.6, 1.0], 'y': [0., 1.00]},
+    fig.add_trace(go.Indicator(
+        domain = {'x': [0.6, 1.0], 'y': [0, 0.7]},
         value = num_vax_second,
         number = {'valueformat':',.0f'},
         mode = "gauge+number+delta",
-        title = {'text': "Second Dose Rollout"},
         delta = {'reference': previous_vax_second, 'valueformat':',.0f'},
         gauge = {'axis': {'range': [None, pop], 
                           'tickvals':group_prop,
@@ -580,10 +595,15 @@ def make_gauge(num_vax_first, previous_vax_first, num_vax_second, previous_vax_s
                 'bar': {'color': colors['monzo']},
                  'steps': 
                  [{'range': [group_prop[i], group_prop[i+1]], 
-                 'color': colours[i]} for i in range((len(group_pops)-1))]},
-        name='Cumulative Number of First Doses')
+                 'color': colours[i]} for i in range((len(group_pops)-1))]}))
 
-    fig = go.Figure(data = [trace1, trace2])
+    fig.update_layout(
+        grid = {'rows': 2, 'columns': 2, 'pattern': "independent"},
+        margin=dict(
+            l=50,
+            r=100,
+            b=10,
+            t=60))
 
     return fig
 

@@ -7,7 +7,7 @@ from dash.dependencies import Input, Output
 from get_data import get_covid_data, make_cum_vaccine_plot, make_bar, make_gauge, make_7da_plot, make_indexed_plot
 
 def update_data():
-    pop = 67.61e6
+    pop = 67886004
     proj_days = 215
 
     vacc_df, last_update, rolling_avg, end_date, recent_cases_df, recent_cases_fit_end, \
