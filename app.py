@@ -12,8 +12,8 @@ def update_data():
 
     vacc_df, last_update, rolling_avg, end_date, recent_cases_df, recent_cases_fit_end, \
             recent_deaths_df, recent_deaths_fit_end, recent_admissions_df, recent_admissions_fit_end, \
-            admissions_by_age_df, ad_age_groups, cases_by_age_df, cases_age_groups = get_covid_data(pop, proj_days)#, \
-            # deaths_by_age_df, deaths_age_groups = get_covid_data(pop, proj_days)
+            admissions_by_age_df, ad_age_groups, cases_by_age_df, cases_age_groups, \
+            deaths_by_age_df, deaths_age_groups = get_covid_data(pop, proj_days)
 
     vacc_df = vacc_df.rename(columns={'daily_first_dose': 'First Dose', 'daily_second_dose': 'Second Dose'})
 
@@ -29,9 +29,9 @@ def update_data():
     fitted_admissions = make_7da_plot(recent_admissions_df, log=True, metric='Admissions', fit_end=recent_admissions_fit_end)
     age_admissions = make_indexed_plot(admissions_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in ad_age_groups.keys()], metric='Admissions')
     age_cases = make_indexed_plot(cases_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in cases_age_groups.keys()], metric='Cases')
-    # age_deaths = make_indexed_plot(deaths_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in deaths_age_groups.keys()], metric='Deaths')
+    age_deaths = make_indexed_plot(deaths_by_age_df, [x.replace('indexed', ' ').replace('_', ' ') for x in deaths_age_groups.keys()], metric='Deaths')
 
-    return last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases, fitted_deaths, fitted_admissions, age_admissions, age_cases#, age_deaths
+    return last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases, fitted_deaths, fitted_admissions, age_admissions, age_cases, age_deaths
 
 
 def serve_layout():
@@ -47,8 +47,7 @@ def serve_layout():
     global age_cases
     global age_deaths
 
-    last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases, fitted_deaths, fitted_admissions, age_admissions, age_cases = update_data()
-    # , age_deaths = update_data()
+    last_update, cum_first_dose, daily_dose, gauge_chart, fitted_cases, fitted_deaths, fitted_admissions, age_admissions, age_cases, age_deaths = update_data()
 
 
     
@@ -149,9 +148,9 @@ def render_content(tab):
                 html.Div(className='one-half column pretty-container', children=[
                             dcc.Graph(id='fitted-deaths-graph', className='plotly-graph', figure=fitted_deaths)
                     ]),
-                # html.Div(className='one-half column pretty-container', children=[
-                #             dcc.Graph(id='age-deaths-graph', className='plotly-graph', figure=age_deaths)
-                #     ])
+                html.Div(className='one-half column pretty-container', children=[
+                            dcc.Graph(id='age-deaths-graph', className='plotly-graph', figure=age_deaths)
+                    ])
                 ])
         ])
 
@@ -164,4 +163,5 @@ if __name__ == '__main__':
 To Do:
 1) Headline figures/dates
 2) explainers for each graph
+3) user can change period for fit
 '''

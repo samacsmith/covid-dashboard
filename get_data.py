@@ -121,17 +121,32 @@ def get_cases(df):
 
     df['daily_rolling_average'] = df['daily_cases'].rolling(window=7).mean()
     df = df.dropna()
-    df['days_since_start'] = df['date'].apply(lambda x: (x - datetime(2021,1,9)).days)
 
     recent_df = df.copy()
     recent_df = recent_df[recent_df['date']>datetime.strptime("9 January, 2021", "%d %B, %Y")]
 
-    fit_end = datetime.strptime("17 February, 2021", "%d %B, %Y")
+    num_days_to_fit = 5
+    num_days_to_project = 20
+    fit_start = recent_df['date'].max() + timedelta(days=-num_days_to_fit)
+
+    dates = pd.date_range(start=recent_df['date'].max(),
+                        end=recent_df['date'].max()+timedelta(days=num_days_to_project))
+    dates = dates.to_frame()
+    dates.columns = ['date']
+    dates.reset_index(drop=True, inplace=True)
+    recent_df = dates.merge(recent_df, on='date', how='outer').sort_values('date').fillna(0)
+    recent_df = recent_df.reset_index(drop='index')
+
+    recent_df['days_since_start'] = 0
+    recent_df.iloc[-(num_days_to_fit+num_days_to_project):, -1] = recent_df.iloc[-(num_days_to_fit+num_days_to_project):, 0].apply(lambda x: (x - fit_start).days)
     pars, cov = curve_fit(f=exponential, 
-                          xdata=recent_df[recent_df['date']<fit_end]['days_since_start'], 
-                          ydata=recent_df[recent_df['date']<fit_end]['daily_rolling_average'], maxfev=1000)
-    recent_df.loc[:, 'fit'] = recent_df['days_since_start'].apply(lambda x: exponential(x, *pars))
-    return recent_df, fit_end
+                          xdata=recent_df[(recent_df['date']>fit_start) & (recent_df['date']<=fit_start+timedelta(num_days_to_fit))]['days_since_start'], 
+                          ydata=recent_df[(recent_df['date']>fit_start) & (recent_df['date']<=fit_start+timedelta(num_days_to_fit))]['daily_rolling_average'], maxfev=1000)
+    
+    recent_df['fit'] = np.nan
+    recent_df.iloc[-(num_days_to_fit+num_days_to_project):, -1] = recent_df.iloc[-(num_days_to_fit+num_days_to_project):, -2].apply(lambda x: exponential(x, *pars))
+    recent_df.iloc[-num_days_to_project:, -3] = np.nan
+    return recent_df, fit_start
 
 
 def get_deaths(df):
@@ -149,11 +164,28 @@ def get_deaths(df):
     recent_df = df.copy()
     recent_df = recent_df[recent_df['date']>datetime.strptime("30 January, 2021", "%d %B, %Y")]
 
-    fit_end = datetime.strptime("22 February, 2021", "%d %B, %Y")
-    pars, cov = curve_fit(f=exponential, xdata=recent_df[recent_df['date']<fit_end]['days_since_start'], 
-                              ydata=recent_df[recent_df['date']<fit_end]['daily_rolling_average'], maxfev=1000)
-    recent_df.loc[:, 'fit'] = recent_df['days_since_start'].apply(lambda x: exponential(x, *pars))
-    return recent_df, fit_end
+    num_days_to_fit = 5
+    num_days_to_project = 20
+    fit_start = recent_df['date'].max() + timedelta(days=-num_days_to_fit)
+
+    dates = pd.date_range(start=recent_df['date'].max(),
+                        end=recent_df['date'].max()+timedelta(days=num_days_to_project))
+    dates = dates.to_frame()
+    dates.columns = ['date']
+    dates.reset_index(drop=True, inplace=True)
+    recent_df = dates.merge(recent_df, on='date', how='outer').sort_values('date').fillna(0)
+    recent_df = recent_df.reset_index(drop='index')
+
+    recent_df['days_since_start'] = 0
+    recent_df.iloc[-(num_days_to_fit+num_days_to_project):, -1] = recent_df.iloc[-(num_days_to_fit+num_days_to_project):, 0].apply(lambda x: (x - fit_start).days)
+    pars, cov = curve_fit(f=exponential, 
+                          xdata=recent_df[(recent_df['date']>fit_start) & (recent_df['date']<=fit_start+timedelta(num_days_to_fit))]['days_since_start'], 
+                          ydata=recent_df[(recent_df['date']>fit_start) & (recent_df['date']<=fit_start+timedelta(num_days_to_fit))]['daily_rolling_average'], maxfev=1000)
+    
+    recent_df['fit'] = np.nan
+    recent_df.iloc[-(num_days_to_fit+num_days_to_project):, -1] = recent_df.iloc[-(num_days_to_fit+num_days_to_project):, -2].apply(lambda x: exponential(x, *pars))
+    recent_df.iloc[-num_days_to_project:, -3] = np.nan
+    return recent_df, fit_start
 
 
 def get_admissions(df):
@@ -171,11 +203,28 @@ def get_admissions(df):
     recent_df = df.copy()
     recent_df = recent_df[recent_df['date']>datetime.strptime("22 January, 2021", "%d %B, %Y")]
 
-    fit_end = datetime.strptime("22 February, 2021", "%d %B, %Y")
-    pars, cov = curve_fit(f=exponential, xdata=recent_df[recent_df['date']<fit_end]['days_since_start'], 
-                              ydata=recent_df[recent_df['date']<fit_end]['daily_rolling_average'], maxfev=1000)
-    recent_df.loc[:, 'fit'] = recent_df['days_since_start'].apply(lambda x: exponential(x, *pars))
-    return recent_df, fit_end
+    num_days_to_fit = 5
+    num_days_to_project = 20
+    fit_start = recent_df['date'].max() + timedelta(days=-num_days_to_fit)
+
+    dates = pd.date_range(start=recent_df['date'].max(),
+                        end=recent_df['date'].max()+timedelta(days=num_days_to_project))
+    dates = dates.to_frame()
+    dates.columns = ['date']
+    dates.reset_index(drop=True, inplace=True)
+    recent_df = dates.merge(recent_df, on='date', how='outer').sort_values('date').fillna(0)
+    recent_df = recent_df.reset_index(drop='index')
+
+    recent_df['days_since_start'] = 0
+    recent_df.iloc[-(num_days_to_fit+num_days_to_project):, -1] = recent_df.iloc[-(num_days_to_fit+num_days_to_project):, 0].apply(lambda x: (x - fit_start).days)
+    pars, cov = curve_fit(f=exponential, 
+                          xdata=recent_df[(recent_df['date']>fit_start) & (recent_df['date']<=fit_start+timedelta(num_days_to_fit))]['days_since_start'], 
+                          ydata=recent_df[(recent_df['date']>fit_start) & (recent_df['date']<=fit_start+timedelta(num_days_to_fit))]['daily_rolling_average'], maxfev=1000)
+    
+    recent_df['fit'] = np.nan
+    recent_df.iloc[-(num_days_to_fit+num_days_to_project):, -1] = recent_df.iloc[-(num_days_to_fit+num_days_to_project):, -2].apply(lambda x: exponential(x, *pars))
+    recent_df.iloc[-num_days_to_project:, -3] = np.nan
+    return recent_df, fit_start
 
 
 def get_admissions_by_age(df):
@@ -367,15 +416,15 @@ def get_covid_data(pop, proj_days):
     recent_cases_df, recent_cases_fit_end = get_cases(full_df)
     cases_by_age_df, cases_age_groups = get_cases_by_age(full_df)
     recent_deaths_df, recent_deaths_fit_end = get_deaths(full_df)
-    # deaths_by_age_df, deaths_age_groups = get_deaths_by_age(full_df)
+    deaths_by_age_df, deaths_age_groups = get_deaths_by_age(full_df)
     recent_admissions_df, recent_admissions_fit_end = get_admissions(full_df)
     admissions_by_age_df, ad_age_groups  = get_admissions_by_age(full_df)
     vacc_df, rolling_avg, end_date = get_vaccinations(full_df, pop, proj_days)
             
     return vacc_df, last_update, rolling_avg, end_date, recent_cases_df, recent_cases_fit_end, \
             recent_deaths_df, recent_deaths_fit_end, recent_admissions_df, recent_admissions_fit_end, \
-            admissions_by_age_df, ad_age_groups, cases_by_age_df, cases_age_groups, #\
-            # deaths_by_age_df, deaths_age_groups
+            admissions_by_age_df, ad_age_groups, cases_by_age_df, cases_age_groups, \
+            deaths_by_age_df, deaths_age_groups
 
 
 def make_cum_vaccine_plot(df, end_date):
@@ -535,7 +584,6 @@ def make_gauge(num_vax_first, previous_vax_first, num_vax_second, previous_vax_s
         name='Cumulative Number of First Doses')
 
     fig = go.Figure(data = [trace1, trace2])
-    # fig.update_layout(margin=dict(l=120))
 
     return fig
 
@@ -560,13 +608,13 @@ def make_7da_plot(df, log=False, metric='', fit_end=datetime.now()+timedelta(day
                       showlegend=True, marker_color=colors['maincolor'])
     
     fig2 = px.line(df, x='date', y='fit')
-    fig2.update_traces(name=f'Fit (on data up to {fit_end.strftime("%d %B")})', showlegend=True, line_color='#000000', line=dict(width=3))
+    fig2.update_traces(name=f'Fit (on data from {fit_end.strftime("%d %B")} onwards)', showlegend=True, line_color='#fe7f9c', line=dict(width=3))
     
     fig.add_trace(fig2.data[0])
     fig.update_layout(yaxis=dict(tickformat=',.0f', showgrid=True,
                                 tickmode = 'array',
-                                tickvals = [np.round(np.round(df[['daily_rolling_average', 'fit']].to_numpy().max(), 
-                                            (-1*len(str(int(round(df[['daily_rolling_average', 'fit']].to_numpy().max(),0))))+1))/i,
+                                tickvals = [np.round(np.round(df[['daily_rolling_average', 'fit']].fillna(0).to_numpy().max(), 
+                                            (-1*len(str(int(round(df[['daily_rolling_average', 'fit']].fillna(0).to_numpy().max(),0))))+1))/i,
                                             -1*len(str(int(i)))+1) for i in [1,2,4,8,16,32,64]]),
                       xaxis=dict(showgrid=False),
                       font=dict(size=12, color="#000000"), 
