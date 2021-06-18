@@ -534,7 +534,7 @@ def make_bar(df, x_title, y_title, x, y, rolling_avg, proj_days):
 
 def make_gauge(num_vax_first, previous_vax_first, num_vax_second, previous_vax_second, pop):
 
-    vax_take_up = 0.9
+    vax_take_up = 0.85
     
     group_pops = [0, 1.1, 5.5, 2.3, 4.4, 2.9, 8.8, 1.8, 2.4, 2.8, 6.3, 6.7, 7.7]
     group_pops = [x*1e6 for x in group_pops]
