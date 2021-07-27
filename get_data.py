@@ -117,7 +117,7 @@ def get_cases(df):
     df.columns = ['date', 'area', 'daily_cases']
     df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
     df = df.groupby('date').sum().reset_index()
-    df = df.iloc[:-5]
+    df = df.iloc[:-3]
 
     df['daily_rolling_average'] = df['daily_cases'].rolling(window=7).mean()
     df = df.dropna()
@@ -155,7 +155,7 @@ def get_deaths(df):
     df.columns = ['date', 'area', 'daily_deaths']
     df.loc[:, 'date'] = pd.to_datetime(df['date'], format="%Y-%m-%d")
     df = df.groupby('date').sum().reset_index()
-    df = df.iloc[:-5]
+    df = df.iloc[:-3]
 
     df['daily_rolling_average'] = df['daily_deaths'].rolling(window=7).mean()
     df = df.dropna()
@@ -307,7 +307,7 @@ def get_cases_by_age(df):
     cases_by_age_df = cases_by_age_male_df.set_index('date') + cases_by_age_male_df.set_index('date')
     cases_by_age_df = cases_by_age_df.reset_index()
     cases_by_age_df.loc[:, 'date'] = pd.to_datetime(cases_by_age_df['date'], format="%Y-%m-%d")
-    cases_by_age_df = cases_by_age_df.iloc[:-5]
+    cases_by_age_df = cases_by_age_df.iloc[:-3]
 
     for group in age_groups.keys():
         cases_by_age_df[group] = cases_by_age_df[age_groups[group]].sum(axis=1)
@@ -356,7 +356,7 @@ def get_deaths_by_age(df):
     deaths_by_age_df = pd.DataFrame(deaths_by_age)
     deaths_by_age_df = deaths_by_age_df.T.reset_index().rename(columns={'index':'date'}).sort_values('date').reset_index(drop=True)
     deaths_by_age_df = deaths_by_age_df.groupby('date').sum().reset_index()
-    deaths_by_age_df = deaths_by_age_df.iloc[:-5]
+    deaths_by_age_df = deaths_by_age_df.iloc[:-3]
 
     deaths_by_age_df.loc[:, 'date'] = pd.to_datetime(deaths_by_age_df['date'], format="%Y-%m-%d")
 
